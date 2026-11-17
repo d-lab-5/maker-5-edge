@@ -42,7 +42,7 @@ packages = ["maker_5_edge", "maker_5_edge.core", "maker_5_edge.edge", "maker_5_e
 # skill over without the repository. tests/test_core.py checks this list.
 [tool.setuptools.package-data]
 "maker_5_edge.edge" = ["static/*", "ontology/*/*.ttl", "ontology/*.ttl"]  # edge layer
-maker_5_edge = ["VERSION", "templates/*.html", "static/*", "skill/*.md", "shared/*.json"]
+maker_5_edge = ["VERSION", "templates/*.html", "static/*", "static/fonts/*", "skill/*.md", "shared/*.json"]
 "maker_5_edge.core" = ["static/*", "templates/core/*.html"]
 
 [tool.setuptools.dynamic]

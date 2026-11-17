@@ -1,43 +1,71 @@
 {% extends "core/_base.html" %}
 
-{#- The tool's page. The header (theme, About, Restart, Stop) and core.js come
-    from core/_base.html; this file fills the blocks. -#}
+{#- Maker-5 Edge: the products on this edge and the model each holds. The
+    header and core.js come from core/_base.html; the chat and connections
+    panels from the edge layer (edge.js). The structure is
+    digitalhome-pro-edge's. -#}
 
 {% block head %}
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='icon.svg') }}">
+<link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+<meta name="theme-color" content="#111614">
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="stylesheet" href="/edge-static/edge.css">  <!-- edge layer -->
+<script src="/edge-static/edge.js" defer></script>
 {% endblock %}
 
+{% block brand %}<span class="brand">Maker-5<span class="tld"> edge</span></span>{% endblock %}
+
 {% block toolbar %}
-  <button id="btn-new">New</button>
-  <button id="btn-save" class="primary">Save</button>
-  <button id="btn-delete" class="danger">Delete</button>
+  <button id="btn-side" class="side-btn" aria-pressed="true" aria-controls="side" data-help="help.side">☰</button>
+{% endblock %}
+
+{% block toolbar_end %}
+  <label class="toggle" data-help="help.help"><input type="checkbox" id="help-on"> <span data-i18n="help.label">help</span></label>
+  <label class="toggle" data-help="help.lang"><span data-i18n="lang.label">language</span>
+    <select id="lang-pick">
+      <option value="en">EN</option>
+      <option value="de">DE</option>
+      <option value="fr">FR</option>
+    </select>
+  </label>
 {% endblock %}
 
 {% block main %}
 <main class="layout">
 
-  <aside class="side">
-    <h3>Notes</h3>
-    <div id="note-list" class="note-list"><p class="note">loading…</p></div>
+  <aside class="side" id="side">
+    <h3 data-i18n="side.title" data-help="help.products">Products</h3>
+    <div id="ws-list" class="ws-list"><p class="note" data-i18n="side.loading">loading…</p></div>
+    <details class="new-ws">
+      <summary data-i18n="side.new" data-help="help.new">New product</summary>
+      <label><span data-i18n="side.titleLabel">Title</span> <input id="np-title" type="text" placeholder="e.g. Weather box" data-i18n-placeholder="side.titlePh"></label>
+      <button id="np-make" class="primary" data-i18n="side.start">Start it</button>
+      <p class="note" data-i18n="side.orChat">Or ask in the chat: “a weather box: a sensor board, firmware, I2C between them”.</p>
+    </details>
   </aside>
-  <section class="editor">
-    <label>Title <input type="text" id="f-title" placeholder="What is this note about?"></label>
-    <label>Name <input type="text" id="f-name" placeholder="file name, e.g. meeting-notes"></label>
-    <label>Body <textarea id="f-body" rows="12"></textarea></label>
-    <label>Tags <input type="text" id="f-tags" placeholder="comma, separated"></label>
-    <div class="actions">
-      <button id="btn-summarise">Summarise</button>
-      <span id="status" class="note"></span>
-    </div>
-    <pre id="summary" class="summary" hidden></pre>
+
+  <section class="work">
+    <nav class="tabs" role="tablist">
+      <button data-tab="model" class="is-on" data-i18n="tab.model" data-help="help.model">Model</button>
+      <button data-tab="proposals" data-i18n="tab.proposals" data-help="help.proposals">Proposals</button>
+      <button data-tab="history" data-i18n="tab.history" data-help="help.history">History</button>
+      <button data-tab="files" data-i18n="tab.files" data-help="help.files">Files</button>
+    </nav>
+    <div id="tab-model" class="tab"><p class="note" data-i18n="model.choose">Choose or start a product.</p></div>
+    <div id="tab-proposals" class="tab" hidden></div>
+    <div id="tab-history" class="tab" hidden></div>
+    <div id="tab-files" class="tab" hidden></div>
   </section>
+
   <section id="edge-connections" class="panel"></section>  <!-- edge layer -->
   <section id="edge-chat" class="panel"></section>
 </main>
+<div id="help-tip" class="help-tip" role="tooltip" hidden></div>
+<div id="busy" class="busy" hidden role="status" aria-live="polite"><div class="busy__spin"></div><span data-i18n="busy">loading…</span></div>
 {% endblock %}
 
 {% block scripts %}
-<link rel="stylesheet" href="/edge-static/edge.css">
-<script src="/edge-static/edge.js" defer></script>
+<script src="{{ url_for('static', filename='i18n.js') }}"></script>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
 {% endblock %}

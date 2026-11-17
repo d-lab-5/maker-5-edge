@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "maker-5-edge": {
+      "command": ".venv/bin/python",
+      "args": ["-m", "maker_5_edge.mcp_server"],
+      "env": {}
+    }
+  }
+}

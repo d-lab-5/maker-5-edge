@@ -1,12 +1,12 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 D-LAB-5
 """
-materials.py — the workspace's stock, seen from this edge (ADR-0010 in
+materials.py — the organisation's stock, seen from this edge (ADR-0010 in
 maker-5-shared).
 
 The stock lives in the cloud (ADR-0008): articles with what is on hand,
 reserved and free, units with their codes. This edge reads it through the
-edge API and takes parts for a product, as the workspace's edge; it never
+edge API and takes parts for a product, as the organisation's edge; it never
 edits the catalogue, receives stock or prints codes (a person does that on
 the site).
 
@@ -30,7 +30,7 @@ STEPS = ("reserve", "release", "return")
 
 
 class NoSpace(LookupError):
-    """The product has no space of that name in the linked workspace."""
+    """The linked organisation has no workspace of the product's name."""
 
 
 def stock(q: str = "", category: str = "", profile: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -53,8 +53,8 @@ def resolve(code: str, profile: Optional[str] = None) -> Dict[str, Any]:
 def space_of(title: str, profile: Optional[str] = None) -> Dict[str, Any]:
     space = cloud.space_by_slug(cloud.space_slug(title), profile)
     if space is None:
-        raise NoSpace(f"the linked workspace has no product named “{title}”: create it there, "
-                      "or give this product the same name")
+        raise NoSpace(f"the linked organisation has no workspace named “{title}”: create it there, "
+                      "or give this one the same name")
     return space
 
 

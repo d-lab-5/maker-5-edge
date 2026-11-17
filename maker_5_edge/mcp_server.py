@@ -176,11 +176,11 @@ def propose(product: str, title: str, concerns: Optional[List[str]] = None) -> d
 
 
 # --------------------------------------------------------------- parts ----
-# The workspace's stock lives in the cloud (ADR-0008, ADR-0010 in maker-5-shared).
+# The organisation's stock lives in the cloud (ADR-0008, ADR-0010 in maker-5-shared).
 
 @server.tool()
 def stock(query: str = "", category: str = "") -> list:
-    """The workspace's stock: articles (id, name, category, maker, part
+    """The organisation's stock, shared by its workspaces: articles (id, name, category, maker, part
     number, place) with onHand, reserved and free. Search by words; a
     category is compute, storage, electronic, mechanical, cable, consumable,
     tool or other."""

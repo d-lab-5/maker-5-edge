@@ -19,8 +19,8 @@ PACKAGE = "maker_5_edge"
 TITLE = "Maker-5 Edge"
 KIND = "human"                 # human | iot | robot
 CLOUD_NAME = "Maker-5"          # "the Mediathek", "DigitalHome" …
-TENANT_NOUN = "workspace"        # what people call a tenant here
-SPACE_NOUN = "product"          # … and a space
+TENANT_NOUN = "organisation"     # what people call a tenant here
+SPACE_NOUN = "workspace"         # … and a space: a project or a product in development
 ENV = "MAKER5_EDGE"                 # MAKER5_EDGE_EDGE_STATE, MAKER5_EDGE_CHAT_CONFIRM …
 
 # The client id and scope this edge asks for when it pairs (DH-SPEC-100).
@@ -101,13 +101,15 @@ names one, restore() goes back to one as a new revision. A frozen tag is a
 baseline, e.g. "Prototype A"; propose one only for a state the person calls a
 prototype or a release.
 
-Parts come from the {tenant}'s stock in the cloud: stock() searches it
+Parts come from the {tenant}'s stock in the cloud, which its workspaces
+share: stock() searches it
 (articles with on hand, reserved, free), resolve_code() says what a scanned
 code is. link_article() says which article a block or module is built from
 and how many; bom() then lists what the product needs against what it took
 and what is free. reserve_parts(), release_parts() and return_parts() take
 parts for the product or give them back; each waits for Confirm, and the
-cloud refuses what is not free. Never invent an article id: take it from
+cloud refuses what is not free. A product here is the cloud workspace of
+the same name. Never invent an article id: take it from
 stock(). Adding articles, receiving stock and printing labels are done by a
 person on the cloud's Stock page.
 

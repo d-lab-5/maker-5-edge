@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 D-LAB-5
-"""Parts from the workspace's stock (ADR-0010 in maker-5-shared): a block
+"""Parts from the organisation's stock (ADR-0010 in maker-5-shared): a block
 names its article, the parts list counts what the model needs against what
 the product took, and taking parts goes to the cloud for the product's
 space. The cloud is a fake here; every name is invented."""

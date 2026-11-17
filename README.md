@@ -2,11 +2,27 @@
 
 **v0.1.0** · GPL-3.0 · [releases](https://github.com/d-lab-5/maker-5-edge/releases)
 
-Local workstation and lab-bench edge for Maker-5: syncs Git repos, CAD/PCB artifacts and hardware telemetry with the cloud.
+Local workstation and lab-bench edge daemon for **Maker-5**. It syncs Git
+repos, CAD/PCB artifacts and hardware telemetry with the cloud.
 
-<!-- Generated from the D-LAB-5 tool template. Rewrite the parts about notes;
-     keep the install, update and agent sections accurate. scripts/release.py
-     updates every v-pin in this file. -->
+It runs on your workstation or lab bench and pairs securely with the Maker-5
+cloud ([maker-5-cloud](https://github.com/d-lab-5/maker-5-cloud), at
+maker-5.cloud) using the device flow: the edge shows a code, and an admin of
+your workspace approves it. It then watches local Git repositories, CAD/PCB
+schematics, firmware builds and connected test hardware, and syncs what it
+learns with the cloud's semantic graph in both directions. The page and the
+MCP server answer only to this machine, so your local environment is never
+exposed.
+
+Knowledge is one RDF A-Box per product, checked with the same Maker-5 SHACL
+shapes as the cloud (`maker_5_edge/edge/ontology/`, copied from
+`maker-5-cloud/packages/ontology`; CC BY 4.0). Decisions and the roadmap are in
+[maker-5-shared](https://github.com/d-lab-5/maker-5-shared), published at
+https://docs.dlab5.net/d-lab-5/maker-5/.
+
+Made from [python-tool-template](https://github.com/ERP-LAB-5/python-tool-template)
+and the [template-dlab5-edge](https://github.com/d-lab-5/template-dlab5-edge)
+layer. `docs/edge.md` says which files belong to which.
 
 ## Use it
 
@@ -140,5 +156,5 @@ skill copies, commits, tags, pushes, and creates the GitHub release.
 
 ## Licence
 
-GPL-3.0-or-later. © 2026 D-LAB-5 — *Twin. Experiment. Automate.*
+GPL-3.0-or-later, except `maker_5_edge/edge/ontology/`, which is CC BY 4.0. © 2026 D-LAB-5 — *Twin. Experiment. Automate.*
 See [LICENSE](LICENSE).

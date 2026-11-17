@@ -1,0 +1,165 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""The edge layer wired into the tool: its routes answer, this machine only,
+and the chat can propose only what settings allow."""
+
+from __future__ import annotations
+
+import pytest
+
+from maker_5_edge.app import app
+from maker_5_edge.edge import routes, settings
+
+
+@pytest.fixture
+def client(tmp_path, monkeypatch):
+    monkeypatch.setenv("MAKER5_EDGE_EDGE_STATE", str(tmp_path / "cloud.json"))
+    monkeypatch.setenv("MAKER5_EDGE_EDGE_DATA", str(tmp_path / "data"))
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "claude"))
+    monkeypatch.setattr(routes, "_CHAT", {})        # a fresh chat, in this test's folders
+    return app.test_client()
+
+
+def test_the_connections_answer_without_a_token(client):
+    r = client.get("/api/cloud")
+    assert r.status_code == 200
+    assert r.get_json()["linked"] is False and "device_token" not in r.get_data(as_text=True)
+
+
+def test_another_host_name_is_refused(client):
+    # DNS rebinding: a page whose own name resolves to 127.0.0.1
+    assert client.get("/api/cloud", headers={"Host": "evil.example:8773"}).status_code == 403
+    assert client.get("/api/cloud", headers={"Host": "127.0.0.1:8773"}).status_code == 200
+
+
+def test_a_write_from_another_site_is_refused(client):
+    r = client.post("/api/cloud/use", json={"profile": "prod"}, headers={"Origin": "https://evil.example"})
+    assert r.status_code == 403
+
+
+def test_another_computer_sees_the_page_but_not_the_chat_or_the_connections(client):
+    # started for the network: a browser elsewhere on it gets the page and the
+    # knowledge, while the chat and the device token stay on this computer
+    away = {"REMOTE_ADDR": "192.168.1.50"}
+    assert client.get("/api/knowledge", environ_base=away).status_code == 200
+    cloud = client.get("/api/cloud", environ_base=away).get_json()
+    assert cloud["here"] is False and client.get("/api/cloud").get_json()["here"] is True
+    chat = client.get("/api/chat", environ_base=away).get_json()
+    assert chat["available"] is False and "only on the computer" in chat["why"]
+    for method, path in [("POST", "/api/chat"), ("GET", "/api/chat/history"), ("GET", "/api/chat/proposals"),
+                         ("POST", "/api/chat/proposals/p000000-1/confirm"), ("POST", "/api/cloud/link"),
+                         ("POST", "/api/cloud/unlink"), ("POST", "/api/cloud/use")]:
+        assert client.open(path, method=method, json={}, environ_base=away).status_code == 403, path
+    assert client.get("/api/chat/history").status_code == 200
+
+
+def test_nobody_may_frame_the_page(client):
+    r = client.get("/api/cloud")
+    assert r.headers["X-Frame-Options"] == "DENY"
+
+
+def test_the_chat_proposes_only_what_settings_allow(client):
+    ok = client.post("/api/chat/proposals", json={"summary": "sync", "method": "POST", "path": "/api/knowledge/sync", "body": {}})
+    assert ok.status_code == 201
+    bad = client.post("/api/chat/proposals", json={"summary": "x", "method": "POST", "path": "/api/shutdown", "body": {}})
+    assert bad.status_code == 400
+    assert ("POST", r"/api/knowledge/sync") in settings.CHAT_ALLOWED
+
+
+def test_linking_needs_an_address(client):
+    r = client.post("/api/cloud/link", json={})
+    assert r.status_code == 400
+
+
+def test_knowledge_lists_the_local_a_boxes(client):
+    r = client.get("/api/knowledge")
+    assert r.status_code == 200 and r.get_json()["graphs"][0]["name"] == "shared"
+
+
+def test_the_panels_are_served(client):
+    js = client.get("/edge-static/edge.js")
+    assert js.status_code == 200
+    # every button says what it does, above it (core.js shows data-help), and
+    # what the person starts shows the core's loading card
+    text = js.get_data(as_text=True)
+    assert text.count('"data-help"') >= 10 and "core.busy" in text
+
+
+def test_a_confirmed_proposal_that_fails_says_why_and_the_chat_hears_it(client):
+    pid = client.post("/api/chat/proposals", json={"summary": "link", "method": "POST",
+                                                   "path": "/api/cloud/link", "body": {}}).get_json()["id"]
+    r = client.post(f"/api/chat/proposals/{pid}/confirm")
+    assert r.status_code == 502 and r.get_json()["problem"]
+    listed = {p["id"]: p for p in client.get("/api/chat/proposals").get_json()}
+    assert listed[pid]["outcome"] == "failed"
+    assert "FAILED" in routes.chat_state()[0].news()
+    assert client.post(f"/api/chat/proposals/{pid}/confirm").status_code == 409
+
+
+def test_a_proposal_from_before_a_restart_still_waits(client, monkeypatch):
+    pid = client.post("/api/chat/proposals", json={"summary": "sync", "method": "POST",
+                                                   "path": "/api/knowledge/sync", "body": {}}).get_json()["id"]
+    monkeypatch.setattr(routes, "_CHAT", {})        # the edge restarted
+    assert [p["id"] for p in client.get("/api/chat").get_json()["waiting"]] == [pid]
+
+
+def test_the_history_answers_and_an_unknown_conversation_is_404(client):
+    r = client.get("/api/chat/history")
+    assert r.status_code == 200 and r.get_json()["items"] == []
+    assert client.get("/api/chat/history/0a1b2c3d-0000-4000-8000-00000000abcd").status_code == 404
+    assert client.post("/api/chat/history/0a1b2c3d-0000-4000-8000-00000000abcd/resume").status_code == 404
+
+
+def test_another_computer_chats_with_the_key_only(client, monkeypatch):
+    # started for the network: the key from this computer's panel, given once,
+    # opens the chat elsewhere; what only this computer may do stays here
+    monkeypatch.setitem(app.config, "CORE_EXTRA_HOSTS", {"192.168.1.20"})
+    monkeypatch.setattr(routes.time, "sleep", lambda s: None)
+    away = {"REMOTE_ADDR": "192.168.1.50"}
+    other = app.test_client()
+    assert other.get("/api/chat", environ_base=away).get_json()["needs_key"] is True
+    assert other.get("/api/chat/history", environ_base=away).status_code == 403
+    assert other.get("/api/chat/key", environ_base=away).status_code == 403
+    shown = client.get("/api/chat/key").get_json()
+    assert shown["links"][0].startswith("http://192.168.1.20:") and shown["links"][0].endswith("#chat-key=" + shown["key"])
+    assert other.post("/api/chat/key", json={"key": "wrong"}, environ_base=away).status_code == 403
+    assert other.post("/api/chat/key", json={"key": shown["key"]}, environ_base=away).status_code == 200
+    assert other.get("/api/chat/history", environ_base=away).status_code == 200
+    # the MCP server's routes and a new key: this computer only
+    assert other.post("/api/chat/proposals", json={}, environ_base=away).status_code == 403
+    assert other.post("/api/chat/key/new", json={}, environ_base=away).status_code == 403
+    # a proposal elsewhere may confirm; linking a cloud not
+    ok = client.post("/api/chat/proposals", json={"summary": "sync", "method": "POST", "path": "/api/knowledge/sync", "body": {}}).get_json()
+    link = client.post("/api/chat/proposals", json={"summary": "link", "method": "POST", "path": "/api/cloud/link", "body": {}}).get_json()
+    assert other.post(f"/api/chat/proposals/{link['id']}/confirm", environ_base=away).status_code == 403
+    assert routes.chat_state()[0].items[link["id"]]["state"] == "waiting"      # still waiting, for this computer
+    assert other.post(f"/api/chat/proposals/{ok['id']}/dismiss", environ_base=away).status_code == 200
+    # a new key signs every other computer out
+    assert client.post("/api/chat/key/new", json={}).get_json()["key"] != shown["key"]
+    assert other.get("/api/chat/history", environ_base=away).status_code == 403
+
+
+def test_the_chat_can_stay_on_this_computer(client, monkeypatch):
+    monkeypatch.setitem(app.config, "CORE_EXTRA_HOSTS", {"192.168.1.20"})
+    monkeypatch.setattr(settings, "CHAT_ON_NETWORK", False, raising=False)
+    got = client.get("/api/chat", environ_base={"REMOTE_ADDR": "192.168.1.50"}).get_json()
+    assert got["available"] is False and "needs_key" not in got
+    assert client.post("/api/chat/key", json={"key": "x"}, environ_base={"REMOTE_ADDR": "192.168.1.50"}).status_code == 403
+
+
+def test_the_two_start_commands(monkeypatch):
+    from maker_5_edge.edge import start
+    ran = {}
+    monkeypatch.setattr(start, "_answers", lambda port: False)
+    monkeypatch.setattr(start.os, "execv", lambda exe, cmd: ran.setdefault("cmd", cmd))
+    monkeypatch.setattr(start.sys, "platform", "linux")
+    start.main(["--lan", "--port", "8773"])
+    assert ran["cmd"][2:] == ["maker_5_edge", "--port", "8773", "--host", "0.0.0.0"]
+    ran.clear()
+    start.main(["--port", "8773"])
+    assert "--host" not in ran["cmd"]
+
+
+def test_the_page_loads_the_edge_panels(client):
+    # edge-wire put the script where the page really renders it
+    html = client.get("/").get_data(as_text=True)
+    assert 'id="edge-chat"' in html and "/edge-static/edge.js" in html

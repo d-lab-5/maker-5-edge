@@ -1,3 +1,16 @@
 {
-  "enabledMcpjsonServers": ["maker-5-edge"]
+  "enabledMcpjsonServers": [
+    "maker-5-edge"
+  ],
+  "enabledPlugins": {
+    "dlab5-edge-template@d-lab-5": true
+  },
+  "extraKnownMarketplaces": {
+    "d-lab-5": {
+      "source": {
+        "source": "github",
+        "repo": "d-lab-5/agent-skills"
+      }
+    }
+  }
 }

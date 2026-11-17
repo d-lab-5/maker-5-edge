@@ -1,0 +1,17 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: 0fb6c81
+_src_path: gh:d-lab-5/template-dlab5-edge
+cloud_name: Maker-5
+edge_kind: human
+env_prefix: MAKER5_EDGE
+github_org: d-lab-5
+package_name: maker_5_edge
+port: 8773
+repo_name: maker-5-edge
+space_noun: product
+tenant_noun: workspace
+title: Maker-5 Edge
+tool_name: maker-5-edge
+with_mcp: true
+with_windows: true
+with_workspace: true

@@ -1,0 +1,11 @@
+The Maker-5 ontology: everything in this folder (tbox/, shapes/, abox/examples/
+and this package's README) is licensed under the Creative Commons Attribution
+4.0 International licence (CC BY 4.0), unlike the rest of maker-5-cloud, which
+is AGPL-3.0-or-later:
+
+  https://creativecommons.org/licenses/by/4.0/legalcode
+
+Attribute it to "D-LAB-5, Maker-5". The test in __tests__/ is AGPL-3.0-or-later
+with the rest of the code.
+
+Copyright (c) 2026 D-LAB-5

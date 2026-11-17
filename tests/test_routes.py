@@ -38,7 +38,7 @@ def test_the_page_renders_its_shell(client):
                    "manifest.webmanifest", "i18n.js"):
         assert needed in html, needed
     assert client.get("/static/i18n.json").status_code == 200
-    assert client.get("/static/fonts/OFL.txt").status_code == 200
+    assert client.get("/static/icon.svg").status_code == 200
 
 
 def test_a_product_from_start_to_history(client):

@@ -1,44 +1,40 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later
    Copyright (C) 2026 D-LAB-5
 
-   Maker-5 Edge's own styles, on top of core/static/core.css. The look and
-   the layout are digitalhome-pro-edge's (near-black green panels, a green
-   accent, IBM Plex), taken as they are. Only the core tokens are redefined here; core/ is never edited.
-   Fonts: IBM Plex, SIL Open Font License 1.1 (static/fonts/OFL.txt). */
+   Maker-5 Edge's own styles, on top of core/static/core.css. The layout is
+   digitalhome-pro-edge's; the colours are maker-5-cloud's
+   (packages/site/src/styles/tokens.css: slate surfaces, sky-blue accent, the
+   system font), so the edge and the site look like one product. Light and
+   dark follow the device until the person chooses (core.js). Only the core
+   tokens are redefined here; core/ is never edited. */
 
-@font-face { font-family: "IBM Plex Sans"; font-weight: 400; font-display: swap; src: url("fonts/ibm-plex-sans-latin-400-normal.woff2") format("woff2"); }
-@font-face { font-family: "IBM Plex Sans"; font-weight: 500; font-display: swap; src: url("fonts/ibm-plex-sans-latin-500-normal.woff2") format("woff2"); }
-@font-face { font-family: "IBM Plex Sans"; font-weight: 600 700; font-display: swap; src: url("fonts/ibm-plex-sans-latin-600-normal.woff2") format("woff2"); }
-@font-face { font-family: "IBM Plex Mono"; font-weight: 400; font-display: swap; src: url("fonts/ibm-plex-mono-latin-400-normal.woff2") format("woff2"); }
-@font-face { font-family: "IBM Plex Mono"; font-weight: 500 600; font-display: swap; src: url("fonts/ibm-plex-mono-latin-500-normal.woff2") format("woff2"); }
-
-/* light: the portal's green on paper */
+/* light: the cloud's light theme */
 :root {
-  --bg: #f3f5f3; --paper: #ffffff; --panel: #ffffff; --panel-2: #e9eeea;
-  --ink: #17201b; --muted: #5b6a61; --edge: #d3ddd6;
-  --accent: #3f8a52; --accent-ink: #ffffff;
-  --danger: #c0392b; --warn: #a86a1c; --ok: #3f8a52;
-  --cyan: #2f8aa0; --rail: #eef2ef;
+  --bg: #f1f5f9; --paper: #ffffff; --panel: #ffffff; --panel-2: #e2e8f0;
+  --ink: #0f172a; --muted: #334155; --edge: #cbd5e1;
+  --accent: #0369a1; --accent-ink: #ffffff;
+  --danger: #b91c1c; --warn: #b45309; --ok: #15803d;
+  --cyan: #7c3aed; --rail: #ffffff;
   --radius: 8px;
-  --font: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
-/* dark: the portal's Overview shell, as it is */
+/* dark: the cloud's dark theme */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0d0f0e; --paper: #111614; --panel: #111614; --panel-2: #18201c;
-    --ink: #dfe7e2; --muted: #8a958f; --edge: rgba(120, 140, 130, 0.22);
-    --accent: #6fae7e; --accent-ink: #0a0c0b;
-    --danger: #e0786b; --warn: #c9954f; --ok: #6fae7e;
-    --cyan: #62b6c9; --rail: #0a0c0b;
+    --bg: #0f172a; --paper: #1e293b; --panel: #1e293b; --panel-2: #334155;
+    --ink: #e5e7eb; --muted: #94a3b8; --edge: #334155;
+    --accent: #38bdf8; --accent-ink: #0f172a;
+    --danger: #ef4444; --warn: #f59e0b; --ok: #22c55e;
+    --cyan: #a78bfa; --rail: #0b1120;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0d0f0e; --paper: #111614; --panel: #111614; --panel-2: #18201c;
-  --ink: #dfe7e2; --muted: #8a958f; --edge: rgba(120, 140, 130, 0.22);
-  --accent: #6fae7e; --accent-ink: #0a0c0b;
-  --danger: #e0786b; --warn: #c9954f; --ok: #6fae7e;
-  --cyan: #62b6c9; --rail: #0a0c0b;
+  --bg: #0f172a; --paper: #1e293b; --panel: #1e293b; --panel-2: #334155;
+  --ink: #e5e7eb; --muted: #94a3b8; --edge: #334155;
+  --accent: #38bdf8; --accent-ink: #0f172a;
+  --danger: #ef4444; --warn: #f59e0b; --ok: #22c55e;
+  --cyan: #a78bfa; --rail: #0b1120;
 }
 
 body { font-family: var(--font); -webkit-font-smoothing: antialiased; }
@@ -129,7 +125,7 @@ table.files th, table.bom th { font: 500 10px var(--mono); text-transform: upper
 
 /* the chat's 📎 and dropping files on it (app.js wireChatAttach) */
 .chat-attach { min-width: 2.2rem; }
-#edge-chat.chat-drop { outline: 2px dashed var(--accent, #6fae7e); outline-offset: 4px; border-radius: 8px; }
+#edge-chat.chat-drop { outline: 2px dashed var(--accent); outline-offset: 4px; border-radius: 8px; }
 
 /* the header label: Maker-5, and "edge" in the accent */
 .brand .tld { color: var(--accent); }
@@ -206,9 +202,9 @@ body.side-hidden .layout > .work, body.side-hidden .layout > #edge-connections {
 .ws-list button small { white-space: nowrap; }
 
 /* parts: the article each block is built from, and the product's parts list */
-.part { color: var(--muted, #8a948f); }
+.part { color: var(--muted); }
 .card.parts { margin-top: 1rem; }
 .pick { list-style: none; margin: .5rem 0; padding: 0; max-height: 18rem; overflow: auto; }
 .pick li button { width: 100%; text-align: left; margin: 2px 0; }
-.pill.warn { border-color: #c98a00; color: #c98a00; }
-.pill.ok { border-color: #3c9a5f; color: #3c9a5f; }
+.pill.warn { border-color: var(--warn); color: var(--warn); }
+.pill.ok { border-color: var(--ok); color: var(--ok); }

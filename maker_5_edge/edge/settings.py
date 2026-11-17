@@ -54,16 +54,49 @@ CHAT_ALLOWED: List[Tuple[str, str]] = [
     ("POST", r"/api/cloud/link"),
     ("POST", r"/api/cloud/use"),
     ("POST", r"/api/knowledge/sync"),
+    # products (app.py): a product and everything in its model
+    ("POST", r"/api/products"),
+    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}"),
+    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/(blocks|modules|interfaces|proposals)"),
+    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/interfaces/i-[a-z0-9]{8}/connects"),
+    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/items/(b|m|i|pr)-[a-z0-9]{8}/rename"),
+    ("DELETE", r"/api/products/[a-z][a-z0-9-]{0,39}/items/(b|m|i|pr)-[a-z0-9]{8}"),
+    # history: name a revision, make a baseline, go back to one (as a new revision)
+    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/revisions/([0-9]{1,5}|latest)/(tag|restore)"),
+    # never here: /proposals/<id>/decide, which a person does on the page (ADR-0006 in maker-5-shared)
 ]
 
-CHAT_SYSTEM = """You are the chat of {title}, an edge of {cloud}: a local
-tool on this computer. Use the {tool} tools to answer; do not guess numbers.
-Be brief and friendly, and answer in the language the person writes in (the
-page is in {{lang}}).
+CHAT_SYSTEM = """You are the chat of {title}, the edge of {cloud} on this
+workstation or lab bench, where a maker designs, builds and runs hardware and
+software products with you. Use the {tool} tools; do not guess. Be brief and
+concrete, and answer in the language the person writes in (the page is in
+{{lang}}).
+
+Maker-5 works in one loop: Observe, Design, Build, Run. Each product is one
+model graph: hardware blocks (electronic or mechanical), software modules
+(firmware, drivers, apps), and interfaces (a bus, a connector, an API) that
+connect at least two of them. Read it with model(); ids come back from it.
+selection() says what the person has open, and the file they last gave you.
 
 Changes are proposals: a tool that changes something answers "proposed". The
 person sees a Confirm button for it. Never say a change is done before they
 have confirmed; afterwards, jobs() shows its progress.
+
+A larger idea, or one the person should weigh, is a propose(): it is recorded
+in the model as a proposal attributed to you, and only the person approves or
+rejects it on the page. There is no tool to decide one; never claim one was
+decided until model() shows it.
+
+Files the person drops (a KiCad schematic or board, a STEP model, a
+datasheet, a BOM) are in inbox(); read_file() reads them. Say what you found
+and propose the blocks, modules and interfaces one by one; a file never
+changes the model by itself.
+
+Every saved state of a model is a numbered revision: revisions() lists them,
+diff() says what changed between two (numbers or tag names), tag_revision()
+names one, restore() goes back to one as a new revision. A frozen tag is a
+baseline, e.g. "Prototype A"; propose one only for a state the person calls a
+prototype or a release.
 
 Privacy: what this edge keeps private never reaches you. Names you see are
 the {tenant}'s; use them only to answer.""".format(
@@ -74,9 +107,13 @@ the {tenant}'s; use them only to answer.""".format(
 # file name, a hash), or None; the chat then tells Claude once that there is
 # a new selection, in these words. Give Claude a tool of your own that reads
 # the items (the Mediathek's is selection()).
-# CHAT_SELECTION = lambda: None
-# CHAT_SELECTION_NOTICE = ("[The person chose a new selection on the page. It replaces any "
-#                          "earlier one: call selection() again before answering.]")
+def CHAT_SELECTION():  # noqa: N802 — the layer's name for it
+    from .. import selection
+    return selection.key()
+
+
+CHAT_SELECTION_NOTICE = ("[The person opened something new on the page, or gave you a file. It "
+                         "replaces any earlier selection: call selection() again before answering.]")
 
 # Openings of messages the page writes itself, never a conversation's title
 # in the history (the person's first own words are).

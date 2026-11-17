@@ -24,84 +24,186 @@ from __future__ import annotations
 
 import argparse
 import urllib.parse
-from typing import Optional
+from typing import List, Optional
 
 from mcp.server.mcpserver import MCPServer
 
-from . import engine as engine
 from .core import mcp_bridge as web
 
 server = MCPServer(
     name="maker-5-edge",
     instructions=(
-        "Local workstation and lab-bench edge for Maker-5: syncs Git repos, CAD/PCB artifacts and hardware telemetry with the cloud" + ". "
-        "A note is a JSON object with a title, a body and optional tags. "
-        "Call validate_note before saving anything you assembled by hand."
-        " Notes live in two folders: 'user' (the person's own, where new saves "
-        "go) and 'shared' (samples that ship with the tool). Pass the version "
-        "read_note returned as base_version when you save, so a change the "
-        "person made in the browser meanwhile is never overwritten silently."
-    ),
-)
+        "Maker-5 Edge keeps the products of a hardware-and-software maker on "
+        "this workstation. Each product is one model graph (Maker-5 ontology): "
+        "hardware blocks, software modules, the interfaces that connect them, "
+        "and proposals for changes. Read with products(), model() and "
+        "selection() (what the person has open). Change with new_product, "
+        "add_block, add_module, add_interface, rename and remove; the person "
+        "confirms each one. Record a larger idea as propose(): only the person "
+        "approves or rejects a proposal, on the page. Every saved state is a "
+        "revision: revisions(), diff(), tag_revision(), restore(). Files the "
+        "person drops for you are in inbox(); read them with read_file()."
+    ),)
 
 web.add_core_tools(server)
 
-from .edge.mcp_tools import add_edge_tools  # edge layer
+from .edge.mcp_tools import act, add_edge_tools  # edge layer
 add_edge_tools(server)
 
 
-@server.tool()
-def validate_note(note: dict) -> list[str]:
-    """Everything wrong with a note. An empty list means it is valid."""
-    return engine.validate(note)
+def _q(x: str) -> str:
+    return urllib.parse.quote(x, safe="")
 
 
-@server.tool()
-def summarise_note(note: dict) -> dict:
-    """Word and line counts and the distinct tags of a valid note."""
-    errors = engine.validate(note)
-    if errors:
-        # web.ToolError, not ValueError: only this kind reaches the agent's model
-        raise web.ToolError("; ".join(errors))
-    return engine.summarise(note)
+def _p(product: str) -> str:
+    return f"/api/products/{_q(product)}"
 
 
-def _qualify(name: str, folder: str) -> str:
-    path = f"/api/notes/{urllib.parse.quote(name)}"
-    return f"{path}?folder={urllib.parse.quote(folder)}" if folder else path
-
-
-@server.tool()
-def list_notes() -> list[dict]:
-    """Every saved note, with its folder and version."""
+def _get(path: str):
     web.ensure_server()
-    return web.call("GET", "/api/notes")
+    return web.call("GET", path)
+
+
+def _clean(**kw) -> dict:
+    return {k: v for k, v in kw.items() if v is not None and v != ""}
+
+
+# ------------------------------------------------------------- reading ----
+
+@server.tool()
+def selection() -> dict:
+    """What the person has open on the page: a product, an item in it, and
+    the file they last dropped for you (read it with read_file)."""
+    return _get("/api/selection")
 
 
 @server.tool()
-def read_note(name: str, folder: str = "") -> dict:
-    """One note: {name, folder, version, data}. With no folder, the user's
-    copy wins over a shared one of the same name."""
-    web.ensure_server()
-    return web.call("GET", _qualify(name, folder))
+def products() -> list:
+    """Every product on this edge: its id, title, status, how many blocks and
+    modules it has, and how many proposals wait for a decision."""
+    return _get("/api/products")
 
 
 @server.tool()
-def save_note(name: str, note: dict, folder: str = "",
-              base_version: Optional[str] = None) -> dict:
-    """Write a note. With no folder it goes back where it lives, or to 'user'
-    when new. Pass base_version from read_note: a save against a version that
-    has since changed is refused, and the error carries the current content."""
-    web.ensure_server()
-    payload = {"note": note, "folder": folder or None, "base_version": base_version}
-    return web.call("PUT", _qualify(name, ""), payload)
+def model(product: str) -> dict:
+    """One product's model: its blocks (with kind), software modules,
+    interfaces (with the blocks and modules each connects) and proposals
+    (state, who made them, who decided). Ids are what the change tools take."""
+    return _get(_p(product))
 
 
 @server.tool()
-def delete_note(name: str, folder: str = "") -> dict:
-    """Delete a note. Say which folder when the name exists in both."""
-    web.ensure_server()
-    return web.call("DELETE", _qualify(name, folder))
+def inbox() -> list:
+    """The files the person gave you: the open product's and the shared
+    inbox's. Each has an id, a name, the kind found in its content (kicad,
+    step, csv, xlsx, turtle, json, pdf, text) and a short note."""
+    return _get("/api/inbox")
+
+
+@server.tool()
+def read_file(file: str, offset: int = 0, limit: int = 20000) -> dict:
+    """The text of a file from inbox(), in slices: `more` says whether to read on
+    from offset + limit."""
+    return _get(f"/api/inbox/{_q(file)}?offset={int(offset)}&limit={int(limit)}")
+
+
+# ------------------------------------------------------------- changing ----
+
+@server.tool()
+def new_product(title: str) -> dict:
+    """Start a product. Its id is minted (p-xxxxxxxx) and never changes; the
+    title can."""
+    return act(f"New product “{title}”", "POST", "/api/products", {"title": title})
+
+
+@server.tool()
+def set_product(product: str, title: str = "", status: str = "") -> dict:
+    """Rename a product (its id and folder stay) or set its status: active,
+    done or archived."""
+    return act(f"Update product {product}", "POST", _p(product), _clean(title=title, status=status))
+
+
+@server.tool()
+def add_block(product: str, name: str, kind: str = "") -> dict:
+    """A hardware block: a board, an enclosure, a sensor. kind is electronic
+    or mechanical (leave it empty when it is not known)."""
+    return act(f"Add block “{name}”", "POST", _p(product) + "/blocks", _clean(name=name, kind=kind))
+
+
+@server.tool()
+def add_module(product: str, name: str) -> dict:
+    """A software module: firmware, a driver, an app."""
+    return act(f"Add software module “{name}”", "POST", _p(product) + "/modules", {"name": name})
+
+
+@server.tool()
+def add_interface(product: str, name: str, connects: List[str]) -> dict:
+    """An interface (a bus, a connector, an API) between at least two blocks
+    or modules, given by their ids from model()."""
+    return act(f"Add interface “{name}”", "POST", _p(product) + "/interfaces",
+               {"name": name, "connects": list(connects)})
+
+
+@server.tool()
+def connect(product: str, interface: str, connects: List[str]) -> dict:
+    """Set what an interface joins, replacing what it joined (at least two ids)."""
+    return act(f"Reconnect {interface}", "POST", _p(product) + f"/interfaces/{_q(interface)}/connects",
+               {"connects": list(connects)})
+
+
+@server.tool()
+def rename(product: str, item: str, name: str) -> dict:
+    """Rename a block, module, interface or proposal."""
+    return act(f"Rename {item} to “{name}”", "POST", _p(product) + f"/items/{_q(item)}/rename", {"name": name})
+
+
+@server.tool()
+def remove(product: str, item: str) -> dict:
+    """Remove an item. A block or module that an interface still connects is
+    refused: remove or reconnect the interface first."""
+    return act(f"Remove {item}", "DELETE", _p(product) + f"/items/{_q(item)}", {})
+
+
+@server.tool()
+def propose(product: str, title: str, concerns: Optional[List[str]] = None) -> dict:
+    """Record a proposal: a change you suggest, attributed to you, that waits
+    for the person. It changes nothing else. Only the person approves or
+    rejects it, on the page; there is no tool for that."""
+    return act(f"Propose “{title}”", "POST", _p(product) + "/proposals",
+               _clean(title=title, concerns=list(concerns or []) or None))
+
+
+# ------------------------------------------------------------- history ----
+
+@server.tool()
+def revisions(product: str) -> list:
+    """Every saved state of the model, newest first: number, when, who,
+    through what (page, chat, mcp), a one-line summary, and its tags. A
+    frozen tag is a baseline (e.g. "Prototype A")."""
+    return _get(_p(product) + "/revisions")
+
+
+@server.tool()
+def diff(product: str, from_revision: str, to_revision: str = "latest") -> dict:
+    """What changed between two revisions (numbers or tag names): nodes
+    added, removed, and changed with each property's values before and after."""
+    return _get(_p(product) + "/diff?" + urllib.parse.urlencode({"from": from_revision, "to": to_revision}))
+
+
+@server.tool()
+def tag_revision(product: str, revision: int, name: str, frozen: bool = False) -> dict:
+    """Name a revision. frozen=True makes it a baseline that never moves:
+    only for a state the person calls a prototype or a release."""
+    return act(f"Tag revision {revision} of {product} \"{name}\"" + (" (baseline)" if frozen else ""), "POST",
+               _p(product) + f"/revisions/{int(revision)}/tag", {"name": name, "frozen": bool(frozen)})
+
+
+@server.tool()
+def restore(product: str, revision: int) -> dict:
+    """Make the model what it was at a revision. History is kept: this adds
+    a new revision with that content."""
+    return act(f"Restore {product} to revision {revision}", "POST",
+               _p(product) + f"/revisions/{int(revision)}/restore", {})
 
 
 def main() -> int:

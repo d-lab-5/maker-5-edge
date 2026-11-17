@@ -204,3 +204,11 @@ body.side-hidden .layout > .work, body.side-hidden .layout > #edge-connections {
 .proposal .decide { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .proposal .decide input { flex: 1 1 200px; }
 .ws-list button small { white-space: nowrap; }
+
+/* parts: the article each block is built from, and the product's parts list */
+.part { color: var(--muted, #8a948f); }
+.card.parts { margin-top: 1rem; }
+.pick { list-style: none; margin: .5rem 0; padding: 0; max-height: 18rem; overflow: auto; }
+.pick li button { width: 100%; text-align: left; margin: 2px 0; }
+.pill.warn { border-color: #c98a00; color: #c98a00; }
+.pill.ok { border-color: #3c9a5f; color: #3c9a5f; }

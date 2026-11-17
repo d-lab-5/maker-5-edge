@@ -23,11 +23,13 @@ import sys
 from flask import abort, jsonify, render_template, request
 
 from . import inbox as ib
+from . import materials as mt
 from . import products as pr
 from . import revisions as rv
 from . import selection as sel
 from .core import server
 from .core import workspace as ws
+from .edge import cloud
 from .edge import knowledge as kn
 
 app = server.create_app(__name__)
@@ -83,6 +85,13 @@ def run(fn, *args, **kwargs):
         return jsonify({"errors": [str(e)]}), 404
     except kn.Invalid as e:
         return jsonify({"errors": e.messages}), 422
+    except mt.NoSpace as e:
+        return jsonify({"errors": [str(e)]}), 409
+    except cloud.NotLinked as e:
+        return jsonify({"errors": [f"this edge is not linked to a cloud yet: {e}"]}), 409
+    except cloud.CloudError as e:
+        # the cloud refused (422: not free, not taken) or failed: say its words
+        return jsonify({"errors": [str(e.payload.get("message") or e) if e.payload else str(e)]}), 422 if e.status == 422 else 502
     except (ValueError, TypeError) as e:
         return jsonify({"errors": [str(e)]}), 400
 
@@ -159,6 +168,40 @@ def rename(p: str, item: str):
 @app.delete("/api/products/<p>/items/<item>")
 def remove(p: str, item: str):
     return run(products().remove, p, item)
+
+
+@app.post("/api/products/<p>/items/<item>/article")
+def link_article(p: str, item: str):
+    """Which article of the stock a block or module is built from (ADR-0010)."""
+    return run(products().link_article, p, item, **fields("article", "quantity"))
+
+
+# ---- parts: the workspace's stock in the cloud (materials.py)
+
+@app.get("/api/stock")
+def stock():
+    return run(mt.stock, request.args.get("q", ""), request.args.get("category", ""))
+
+
+@app.get("/api/stock/<article_id>")
+def stock_article(article_id: str):
+    return run(mt.article, article_id)
+
+
+@app.get("/api/codes/resolve")
+def resolve_code():
+    return run(mt.resolve, request.args.get("code", ""))
+
+
+@app.get("/api/products/<p>/bom")
+def bom(p: str):
+    return run(mt.bom, products(), p)
+
+
+@app.post("/api/products/<p>/parts/<step>")
+def take_parts(p: str, step: str):
+    b = fields("article", "qty", "unit", "note")
+    return run(mt.take, products(), p, step, str(b.get("article", "")), b.get("qty"), b.get("unit"), str(b.get("note", "")))
 
 
 @app.post("/api/products/<p>/proposals")

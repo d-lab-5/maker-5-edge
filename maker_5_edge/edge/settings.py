@@ -61,6 +61,9 @@ CHAT_ALLOWED: List[Tuple[str, str]] = [
     ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/interfaces/i-[a-z0-9]{8}/connects"),
     ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/items/(b|m|i|pr)-[a-z0-9]{8}/rename"),
     ("DELETE", r"/api/products/[a-z][a-z0-9-]{0,39}/items/(b|m|i|pr)-[a-z0-9]{8}"),
+    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/items/(b|m)-[a-z0-9]{8}/article"),
+    # parts from the workspace's stock (ADR-0010 in maker-5-shared)
+    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/parts/(reserve|release|return)"),
     # history: name a revision, make a baseline, go back to one (as a new revision)
     ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/revisions/([0-9]{1,5}|latest)/(tag|restore)"),
     # never here: /proposals/<id>/decide, which a person does on the page (ADR-0006 in maker-5-shared)
@@ -97,6 +100,16 @@ diff() says what changed between two (numbers or tag names), tag_revision()
 names one, restore() goes back to one as a new revision. A frozen tag is a
 baseline, e.g. "Prototype A"; propose one only for a state the person calls a
 prototype or a release.
+
+Parts come from the {tenant}'s stock in the cloud: stock() searches it
+(articles with on hand, reserved, free), resolve_code() says what a scanned
+code is. link_article() says which article a block or module is built from
+and how many; bom() then lists what the product needs against what it took
+and what is free. reserve_parts(), release_parts() and return_parts() take
+parts for the product or give them back; each waits for Confirm, and the
+cloud refuses what is not free. Never invent an article id: take it from
+stock(). Adding articles, receiving stock and printing labels are done by a
+person on the cloud's Stock page.
 
 Privacy: what this edge keeps private never reaches you. Names you see are
 the {tenant}'s; use them only to answer.""".format(

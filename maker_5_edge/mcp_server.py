@@ -42,7 +42,9 @@ server = MCPServer(
         "confirms each one. Record a larger idea as propose(): only the person "
         "approves or rejects a proposal, on the page. Every saved state is a "
         "revision: revisions(), diff(), tag_revision(), restore(). Files the "
-        "person drops for you are in inbox(); read them with read_file()."
+        "person drops for you are in inbox(); read them with read_file(). "
+        "Parts: stock(), resolve_code(), link_article(), bom(), "
+        "reserve_parts(), release_parts(), return_parts()."
     ),)
 
 web.add_core_tools(server)
@@ -171,6 +173,73 @@ def propose(product: str, title: str, concerns: Optional[List[str]] = None) -> d
     rejects it, on the page; there is no tool for that."""
     return act(f"Propose “{title}”", "POST", _p(product) + "/proposals",
                _clean(title=title, concerns=list(concerns or []) or None))
+
+
+# --------------------------------------------------------------- parts ----
+# The workspace's stock lives in the cloud (ADR-0008, ADR-0010 in maker-5-shared).
+
+@server.tool()
+def stock(query: str = "", category: str = "") -> list:
+    """The workspace's stock: articles (id, name, category, maker, part
+    number, place) with onHand, reserved and free. Search by words; a
+    category is compute, storage, electronic, mechanical, cable, consumable,
+    tool or other."""
+    return _get("/api/stock?" + urllib.parse.urlencode(_clean(q=query, category=category)))
+
+
+@server.tool()
+def stock_article(article: str) -> dict:
+    """One article of the stock: its units (serial, state, product, firmware),
+    its codes, which products took it, and what happened to it."""
+    return _get(f"/api/stock/{_q(article)}")
+
+
+@server.tool()
+def resolve_code(code: str) -> dict:
+    """What a code points at: one of our labels (HTTPS://MAKER-5.CLOUD/T/…),
+    an EAN/GTIN, a manufacturer's QR text, nfc:<uid>. Returns its status
+    (article, unit, blank, unknown) and the id."""
+    return _get("/api/codes/resolve?" + urllib.parse.urlencode({"code": code}))
+
+
+@server.tool()
+def link_article(product: str, item: str, article: str, quantity: int = 1) -> dict:
+    """Say which article of the stock a block or module is built from, and
+    how many one product needs. An empty article removes the link."""
+    return act(f"Build {item} from {article or 'nothing'}" + (f" × {quantity}" if article and quantity != 1 else ""),
+               "POST", _p(product) + f"/items/{_q(item)}/article", {"article": article, "quantity": int(quantity or 1)})
+
+
+@server.tool()
+def bom(product: str) -> dict:
+    """The product's parts list: per article, what the model needs, what the
+    product reserved and used, how many are free, and what is missing."""
+    return _get(_p(product) + "/bom")
+
+
+def _parts(step: str, product: str, article: str, qty: int, unit: str, note: str) -> dict:
+    what = f"unit {unit}" if unit else f"{int(qty or 1)} × {article}"
+    return act(f"{step.capitalize()} {what} for {product}", "POST", _p(product) + f"/parts/{step}",
+               _clean(article=article, qty=None if unit else int(qty or 1), unit=unit, note=note))
+
+
+@server.tool()
+def reserve_parts(product: str, article: str, qty: int = 1, unit: str = "", note: str = "") -> dict:
+    """Put parts aside for the product: a quantity of a bulk article, or one
+    unit of a serialised article. The cloud refuses what is not free."""
+    return _parts("reserve", product, article, qty, unit, note)
+
+
+@server.tool()
+def release_parts(product: str, article: str, qty: int = 1, unit: str = "", note: str = "") -> dict:
+    """Give a reservation back to the stock."""
+    return _parts("release", product, article, qty, unit, note)
+
+
+@server.tool()
+def return_parts(product: str, article: str, qty: int = 1, unit: str = "", note: str = "") -> dict:
+    """Give back parts the product used (taken out of a prototype)."""
+    return _parts("return", product, article, qty, unit, note)
 
 
 # ------------------------------------------------------------- history ----

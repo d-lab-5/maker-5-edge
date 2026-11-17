@@ -49,6 +49,8 @@ from . import revisions as rv
 from .edge import knowledge as kn
 
 M5 = Namespace("https://maker-5.cloud/ontology#")
+ARTICLE_IRI = "https://maker-5.cloud/id/article/"
+ARTICLE_ID = re.compile(r"^a-[23456789abcdefghjkmnpqrstuvwxyz]{10}$")
 PROV = Namespace("http://www.w3.org/ns/prov#")
 SCHEMA = Namespace("https://schema.org/")
 ID = "https://maker-5.cloud/id/"
@@ -340,6 +342,28 @@ class Products:
         self._change(p, apply)
         return {"id": item, "name": name}
 
+    def link_article(self, p: str, item: str, article: str = "", quantity: int = 1) -> Dict:
+        """Say which article of the workspace's stock a block or module is
+        built from, and how many one product needs (ADR-0010 in
+        maker-5-shared). An empty article removes the link."""
+        article = (article or "").strip()
+        if article and not ARTICLE_ID.match(article):
+            raise ValueError(f"not an article id: {article}")
+        q = 1 if quantity is None or quantity == "" else int(quantity)
+        if q < 1:
+            raise ValueError("a quantity is at least 1")
+
+        def apply(g: Graph) -> None:
+            n = self._find(g, item, "block", "module")
+            g.remove((n, M5.usesArticle, None))
+            g.remove((n, M5.quantity, None))
+            if article:
+                g.add((n, M5.usesArticle, URIRef(ARTICLE_IRI + article)))
+                if q != 1:
+                    g.add((n, M5.quantity, Literal(q, datatype=XSD.integer)))
+        self._change(p, apply)
+        return {"id": item, "article": article, "quantity": q if article else 0}
+
     def remove(self, p: str, item: str) -> Dict:
         """Remove an item. A block or module that an interface still connects
         is refused: the interface would be left with one end."""
@@ -400,10 +424,16 @@ class Products:
         def items(cls: URIRef) -> List[URIRef]:
             return sorted(set(g.subjects(RDF.type, cls)), key=lambda n: _name(g, n).lower())
 
+        def part(n: URIRef) -> Dict:
+            a = g.value(n, M5.usesArticle)
+            if a is None:
+                return {"article": "", "quantity": 0}
+            return {"article": _local(a), "quantity": int(g.value(n, M5.quantity) or 1)}
+
         blocks = [{"id": _local(n), "name": _name(g, n),
-                   "kind": _local(g.value(n, M5.blockType)).lower() if g.value(n, M5.blockType) else ""}
+                   "kind": _local(g.value(n, M5.blockType)).lower() if g.value(n, M5.blockType) else "", **part(n)}
                   for n in items(M5.Block)]
-        modules = [{"id": _local(n), "name": _name(g, n)} for n in items(M5.SoftwareModule)]
+        modules = [{"id": _local(n), "name": _name(g, n), **part(n)} for n in items(M5.SoftwareModule)]
         interfaces = [{"id": _local(n), "name": _name(g, n),
                        "connects": sorted(({"id": _local(c), "name": _name(g, c)} for c in g.objects(n, M5.connects)),
                                           key=lambda c: c["name"].lower())}

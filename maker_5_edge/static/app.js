@@ -105,10 +105,13 @@ function renameForm(head, title) {
   form.title.select();
 }
 
-function itemRow(x, sub) {
+function itemRow(x, sub, withPart) {
+  const line = x.article && S.bom ? S.bom.lines.find((l) => l.article === x.article) : null;
+  const part = x.article ? `<br><small class="part">🔩 ${esc(line && line.name ? line.name : x.article)}${x.quantity > 1 ? ` × ${x.quantity}` : ""}</small>` : "";
   return `<li data-item="${esc(x.id)}" class="${x.id === S.item ? "is-on" : ""}">
-    <span>${esc(x.name)} ${sub || ""}</span>
-    <span class="acts"><button class="rn" data-help="help.rename">${esc(t("model.rename"))}</button>
+    <span>${esc(x.name)} ${sub || ""}${part}</span>
+    <span class="acts">${withPart ? `<button class="pt" data-help="help.part">${esc(t("parts.part"))}</button>` : ""}
+      <button class="rn" data-help="help.rename">${esc(t("model.rename"))}</button>
       <button class="rm danger" data-help="help.remove">${esc(t("model.remove"))}</button></span></li>`;
 }
 
@@ -116,7 +119,13 @@ async function drawModel() {
   const box = $("#tab-model");
   if (!S.ws) { box.innerHTML = `<p class="note">${esc(t("model.choose"))}</p>`; return; }
   const m = await core.api("GET", P());
-  const key = JSON.stringify(m) + S.item + S.adding;
+  // the parts list asks the cloud: only when the model's links change, never on every poll
+  const links = JSON.stringify([...m.blocks, ...m.modules].map((x) => [x.article, x.quantity]));
+  if (S.bomFor !== S.ws + links) {
+    S.bomFor = S.ws + links;
+    S.bom = links.includes('"a-') ? await core.api("GET", `${P()}/bom`).catch(() => null) : null;
+  }
+  const key = JSON.stringify(m) + S.item + S.adding + JSON.stringify(S.bom);
   if (S.seen.model === key) return;
   if (box.contains(document.activeElement) && document.activeElement.matches("input, select, textarea")) return;  // not while typing
   S.seen.model = key;
@@ -136,15 +145,16 @@ async function drawModel() {
     <p class="sub">${esc(t("model.sub", { n: m.triples }))}</p>
     <div class="cols">
       <section class="card"><header><h3>${esc(t("model.blocks"))}</h3><small>${m.blocks.length}</small></header>
-        <ul class="items">${m.blocks.map((b) => itemRow(b, b.kind ? `<span class="pill ${esc(b.kind)}">${esc(word("kind", b.kind))}</span>` : "")).join("")}</ul>
+        <ul class="items">${m.blocks.map((b) => itemRow(b, b.kind ? `<span class="pill ${esc(b.kind)}">${esc(word("kind", b.kind))}</span>` : "", true)).join("")}</ul>
         ${addForm("block")}</section>
       <section class="card"><header><h3>${esc(t("model.modules"))}</h3><small>${m.modules.length}</small></header>
-        <ul class="items">${m.modules.map((x) => itemRow(x)).join("")}</ul>
+        <ul class="items">${m.modules.map((x) => itemRow(x, "", true)).join("")}</ul>
         ${addForm("module")}</section>
       <section class="card"><header><h3>${esc(t("model.interfaces"))}</h3><small>${m.interfaces.length}</small></header>
         <ul class="items">${m.interfaces.map((i) => itemRow(i, `<br><small>${i.connects.map((c) => esc(c.name)).join(" ↔ ")}</small>`)).join("")}</ul>
         ${ends.length >= 2 ? addForm("interface") : `<p class="note">${esc(t("model.needTwo"))}</p>`}</section>
-    </div>`;
+    </div>
+    ${drawParts()}`;
   box.querySelector(".ws-rename").onclick = (e) => renameForm(e.target.closest(".ws-head"), m.product.title);
   box.querySelectorAll("button.add").forEach((b) => b.onclick = () => { S.adding = b.dataset.add; S.seen.model = null; drawModel(); });
   box.querySelectorAll("form.add-form").forEach((f) => {
@@ -180,6 +190,74 @@ async function drawModel() {
       });
     };
     li.querySelector(".rm").onclick = () => change("DELETE", `${P()}/items/${encodeURIComponent(id)}`, null, t("model.removed"));
+    const pt = li.querySelector(".pt");
+    if (pt) pt.onclick = () => partDialog(id, [...m.blocks, ...m.modules].find((x) => x.id === id));
+  });
+  box.querySelectorAll("button[data-reserve]").forEach((b) => b.onclick = async () => {
+    const r = await change("POST", `${P()}/parts/reserve`, { article: b.dataset.reserve, qty: Number(b.dataset.qty) }, t("parts.reserved"));
+    if (r) S.bomFor = null;
+  });
+}
+
+// -------------------------------------------------------------- parts ----
+// Which article of the workspace's stock each block and module is built from,
+// and what the product took (materials.py; ADR-0010 in maker-5-shared).
+
+function drawParts() {
+  const b = S.bom;
+  if (!b) return "";
+  if (b.error) return `<section class="card parts"><header><h3>${esc(t("parts.title"))}</h3></header><p class="note">${esc(b.error)}</p></section>`;
+  if (!b.lines.length) return "";
+  return `<section class="card parts"><header><h3>${esc(t("parts.title"))}</h3>
+      <small>${b.space ? esc(t("parts.from", { name: b.space.name })) : ""}</small></header>
+    <table class="files"><thead><tr><th>${esc(t("parts.article"))}</th><th class="num">${esc(t("parts.need"))}</th>
+      <th class="num">${esc(t("parts.reservedH"))}</th><th class="num">${esc(t("parts.used"))}</th><th class="num">${esc(t("parts.free"))}</th><th></th></tr></thead><tbody>
+    ${b.lines.map((l) => `<tr><td>${esc(l.name || l.article)}${l.known ? "" : ` <span class="pill">${esc(t("parts.unknown"))}</span>`}
+        <br><small>${esc(l.for.map((f) => f.name).join(", "))}</small>
+        ${l.units.length ? `<br><small>${l.units.map((u) => esc(u.serial || u.id)).join(", ")}</small>` : ""}</td>
+      <td class="num">${l.need}</td><td class="num">${l.reserved}</td><td class="num">${l.used}</td><td class="num">${l.free ?? "—"}</td>
+      <td>${l.missing && l.tracking === "bulk" && l.free ? `<button class="primary" data-reserve="${esc(l.article)}" data-qty="${Math.min(l.missing, l.free)}">${esc(t("parts.reserve", { n: Math.min(l.missing, l.free) }))}</button>`
+        : l.missing ? `<span class="pill warn">${esc(t("parts.missing", { n: l.missing }))}</span>` : `<span class="pill ok">✓</span>`}</td></tr>`).join("")}
+    </tbody></table>
+    ${b.lines.some((l) => l.missing && l.tracking === "serial") ? `<p class="note">${esc(t("parts.serialHint"))}</p>` : ""}</section>`;
+}
+
+/** Choose the article a block or module is built from: search the stock. */
+function partDialog(id, item) {
+  core.dialog(t("parts.choose", { name: item.name }), `
+    <label><input name="q" placeholder="${esc(t("parts.search"))}" autocomplete="off"></label>
+    <ul class="pick"></ul>
+    <label>${esc(t("parts.qty"))} <input name="qty" type="number" min="1" value="${item.quantity || 1}"></label>
+    <div class="actions"><button value="cancel" formnovalidate>${esc(t("model.cancel"))}</button>
+      ${item.article ? `<button value="unlink" formnovalidate>${esc(t("parts.unlink"))}</button>` : ""}</div>`, (form, dlg) => {
+    const q = form.querySelector('input[name="q"]');
+    const list = form.querySelector(".pick");
+    const qty = () => Number(form.querySelector('input[name="qty"]').value) || 1;
+    const choose = (article) => {
+      dlg.close();
+      S.bomFor = null;
+      change("POST", `${P()}/items/${encodeURIComponent(id)}/article`, { article, quantity: qty() }, t("parts.linked"));
+    };
+    let timer = null;
+    const search = () => {
+      clearTimeout(timer);
+      timer = setTimeout(async () => {
+        try {
+          const got = await core.api("GET", `/api/stock?q=${encodeURIComponent(q.value)}`);
+          list.innerHTML = got.length ? got.slice(0, 30).map((a) => `<li><button type="button" data-a="${esc(a.id)}">
+              <b>${esc(a.name)}</b> <small>${esc([a.manufacturer, a.mpn].filter(Boolean).join(" "))} · ${esc(t("parts.freeN", { n: a.free }))}</small></button></li>`).join("")
+            : `<li class="note">${esc(t("parts.none"))}</li>`;
+          list.querySelectorAll("button[data-a]").forEach((b) => b.onclick = () => choose(b.dataset.a));
+        } catch (err) { list.innerHTML = `<li class="note">${esc(failed(err))}</li>`; }
+      }, 200);
+    };
+    q.oninput = search;
+    form.onsubmit = (ev) => {
+      form.onsubmit = null;
+      if (ev.submitter && ev.submitter.value === "unlink") { ev.preventDefault(); choose(""); }
+    };
+    search();
+    q.focus();
   });
 }
 

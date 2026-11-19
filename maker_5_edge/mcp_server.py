@@ -46,7 +46,7 @@ server = MCPServer(
         "Parts: stock(), resolve_code(), link_article(), bom(), "
         "reserve_parts(), release_parts(), return_parts(). Boxes (read "
         "only): boxes(), box(). A BOM in Markdown: import_bom(). Hardware "
-        "wiring: canvas(), wire(), set_pins(); remove a wire with remove()."
+        "wiring: canvas(), place(), set_pins(), wire(); remove a wire with remove()."
     ),)
 
 web.add_core_tools(server)
@@ -258,6 +258,15 @@ def canvas(product: str) -> dict:
     """The hardware canvas: each block's place and pins (ids <block>.<n>,
     names like GPIO17, roles), and the wires between pins."""
     return _get(_p(product) + "/canvas")
+
+
+@server.tool()
+def place(product: str, block: str, x: int, y: int) -> dict:
+    """Propose where a block sits on the hardware canvas (x right, y down).
+    Placed for the first time, it gets the pins of its part from the parts
+    library. The person confirms it."""
+    return act(f"Place {block} at {int(x)}, {int(y)}", "POST", _p(product) + "/canvas/place",
+               {"block": block, "x": int(x), "y": int(y)})
 
 
 @server.tool()

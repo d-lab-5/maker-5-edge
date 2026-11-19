@@ -267,3 +267,7 @@ body.side-hidden .layout > .work, body.side-hidden .layout > #edge-connections {
 .hw-wire-hit { fill: none; stroke: transparent; stroke-width: 12; cursor: pointer; }
 .hw-wire-hit:hover + .hw-wire { stroke-width: 4; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .hw-wire[stroke="black"] { stroke: #9ca3af; } }
+/* the canvas full screen: the tab fills it, the drawing takes what is left */
+#tab-canvas:fullscreen { background: var(--bg); padding: 10px; overflow: auto; }
+#tab-canvas:fullscreen .hw-svg { height: calc(100vh - 64px); }
+#tab-canvas:fullscreen .hw-side { max-height: calc(100vh - 64px); }

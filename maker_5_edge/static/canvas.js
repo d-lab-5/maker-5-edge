@@ -70,6 +70,7 @@
         <button class="hw-zoom" data-z="-1" data-help="help.hw.zoom">−</button>
         <button class="hw-zoom" data-z="1" data-help="help.hw.zoom">+</button>
         <button class="hw-fit" data-help="help.hw.fit">${esc(t("hw.fit"))}</button>
+        <button class="hw-full" data-help="help.hw.full">${esc(document.fullscreenElement ? t("hw.unfull") : t("hw.full"))}</button>
         <span class="hw-status note">${esc(t("hw.hint"))}</span>
       </div>
       <div class="hw">
@@ -235,6 +236,13 @@
       C.view = { k, x: Math.min(...xs) - 40, y: Math.min(...ys) - 40 };
       apply();
     };
+    // full screen: the whole tab, so the bar and the side list come along
+    box.querySelector(".hw-full").onclick = async () => {
+      try {
+        if (document.fullscreenElement) await document.exitFullscreen();
+        else await box.requestFullscreen();
+      } catch (err) { core.toast(String(err && err.message || err), true); }
+    };
     box.querySelectorAll("[data-place]").forEach((b) => b.onclick = async () => {
       const n = placed.length;
       const x = snap(C.view.x + 60 + (n % 4) * (W + 80)), y = snap(C.view.y + 60 + Math.floor(n / 4) * 320);
@@ -288,6 +296,12 @@
       };
     });
   }
+
+  // the label of the full-screen button follows the state (Esc leaves too)
+  document.addEventListener("fullscreenchange", () => {
+    const b = document.querySelector("#tab-canvas .hw-full");
+    if (b) b.textContent = document.fullscreenElement ? t("hw.unfull") : t("hw.full");
+  });
 
   window.canvasView = { draw };
 })();

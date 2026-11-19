@@ -131,6 +131,18 @@ the same name. Never invent an article id: take it from
 stock(). Adding articles, receiving stock and printing labels are done by a
 person on the cloud's Stock page.
 
+Hardware is drawn on the page's Hardware canvas (ADR-0014): canvas() gives
+each block's place and pins (ids <block>.<number>, names like GPIO17, a
+role: power, ground, signal, audio, video, data) and the wires between pins.
+To realise a design, propose in this order, one change at a time: the blocks
+that are missing (add_block, with link_article to a stock article), their
+place (place(): x to the right, y down, in mm-like units; a part is about 190
+wide, leave 80 between parts, signal flowing left to right), pins where a
+part has none or the wrong ones (set_pins), then the wires (wire(), with a
+colour: red for power, black for ground). Check a pin's name and role in
+canvas() before wiring it: never guess a pin id. Say which wires you would
+draw and why before proposing them; a BOM in Markdown is import_bom().
+
 Privacy: what this edge keeps private never reaches you. Names you see are
 the {tenant}'s; use them only to answer.""".format(
     title=TITLE, cloud=CLOUD_NAME, tool=TOOL, tenant=TENANT_NOUN)

@@ -219,7 +219,10 @@
   "bom.noStock": "The stock could not be read ({why}): nothing is linked or proposed.",
   "bom.create": "Create",
   "bom.done": "{b} blocks and {m} modules made; {a} articles proposed for an admin to accept on Materials.",
-  "bom.proposeFailed": "Proposing articles failed: {why}"
+  "bom.proposeFailed": "Proposing articles failed: {why}",
+  "hw.full": "Full screen",
+  "hw.unfull": "Leave full screen",
+  "help.hw.full": "The canvas on the whole screen; Esc leaves."
  },
  "de": {
   "core.theme": "Design",
@@ -441,7 +444,10 @@
   "bom.noStock": "Der Bestand war nicht lesbar ({why}): nichts wird verknüpft oder vorgeschlagen.",
   "bom.create": "Anlegen",
   "bom.done": "{b} Blöcke und {m} Module angelegt; {a} Artikel zur Annahme durch einen Admin unter Material vorgeschlagen.",
-  "bom.proposeFailed": "Artikel vorschlagen ging nicht: {why}"
+  "bom.proposeFailed": "Artikel vorschlagen ging nicht: {why}",
+  "hw.full": "Vollbild",
+  "hw.unfull": "Vollbild verlassen",
+  "help.hw.full": "Die Fläche auf dem ganzen Bildschirm; Esc beendet."
  },
  "fr": {
   "core.theme": "thème",
@@ -663,7 +669,10 @@
   "bom.noStock": "Le stock n'a pas pu être lu ({why}) : rien n'est lié ni proposé.",
   "bom.create": "Créer",
   "bom.done": "{b} blocs et {m} modules créés ; {a} articles proposés, à accepter par un admin dans Matériel.",
-  "bom.proposeFailed": "La proposition d'articles a échoué : {why}"
+  "bom.proposeFailed": "La proposition d'articles a échoué : {why}",
+  "hw.full": "Plein écran",
+  "hw.unfull": "Quitter le plein écran",
+  "help.hw.full": "Le plan sur tout l'écran ; Échap pour sortir."
  },
  "edge": {
   "de": {

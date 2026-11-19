@@ -34,6 +34,12 @@ def fake(monkeypatch):
         if path == "materials/list":
             return {"articles": [{"id": PI, "name": "Raspberry Pi 1 B", "tracking": "serial", "unit": "pcs", "free": 2},
                                  {"id": SD, "name": "microSD 16 GB", "tracking": "bulk", "unit": "pcs", "free": 10}]}
+        if path == "materials/boxes":
+            return {"boxes": [{"id": BOX, "name": "Doorbell prototype", "kind": "box", "spaceId": body.get("spaceId") or None}]}
+        if path == "materials/resolve":
+            return {"status": "box", "id": BOX} if body["code"] == "K7Q2M9" else {"status": "unit", "id": "u-abcdefghjk"}
+        if path == "materials/box":
+            return {"box": {"id": body["id"], "name": "Doorbell prototype", "links": [{"kind": "firmware", "url": "https://example.org/fw"}]}}
         if path == "materials/product":
             return {"lines": [{"articleId": SD, "reserved": 1, "consumed": 0, "units": []}]}
         if path.startswith("materials/"):
@@ -93,3 +99,24 @@ def test_the_chat_may_propose_parts_but_not_more():
         assert any(m == method and re.fullmatch(rx, path) for m, rx in settings.CHAT_ALLOWED), path
     for path in (f"/api/products/{p}/parts/consume", f"/api/products/{p}/items/i-abcdefgh/article"):
         assert not any(re.fullmatch(rx, path) for _, rx in settings.CHAT_ALLOWED), path
+
+
+BOX = "x-abcdefghjk"
+
+
+def test_boxes_are_read_by_id_or_label_code(fake):
+    assert mt.boxes("doorbell")[0]["id"] == BOX
+    assert fake[-1] == ("materials/boxes", {"q": "doorbell", "spaceId": ""})
+    mt.boxes(workspace="Weather box")
+    assert fake[-1][1]["spaceId"] == "s-aaaaaaaaaa"
+    assert mt.box(BOX)["box"]["links"][0]["kind"] == "firmware"
+    assert mt.box("K7Q2M9")["box"]["id"] == BOX
+    with pytest.raises(ValueError):
+        mt.box("U7Q2M9")
+    with pytest.raises(ValueError):
+        mt.box("  ")
+
+
+def test_the_chat_never_checks_parts_in_or_out():
+    for path in ("/api/boxes", f"/api/boxes/{BOX}"):
+        assert not any(m == "POST" and re.fullmatch(rx, path) for m, rx in settings.CHAT_ALLOWED), path

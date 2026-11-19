@@ -18,6 +18,11 @@ sync does (edge/cloud.py space_slug): ids differ between clouds.
                              against what the product took and what is free
     take(products, p, step, article, qty | unit)
                              reserve, release or return parts for the product
+    boxes(q, workspace)      the organisation's boxes (ADR-0011), read only
+    box(code_or_id)          what a box holds, where it is, its links and files
+
+Boxes are checked in and out on a phone, at the shelf; this edge only reads
+them, so the bench can ask where a part is and where its firmware is.
 """
 
 from __future__ import annotations
@@ -48,6 +53,25 @@ def unit(unit_id: str, profile: Optional[str] = None) -> Dict[str, Any]:
 def resolve(code: str, profile: Optional[str] = None) -> Dict[str, Any]:
     """What a scanned or typed code points at: one of our labels, an EAN, a maker's QR."""
     return cloud.call("materials/resolve", {"code": code}, profile)
+
+
+def boxes(q: str = "", workspace: str = "", profile: Optional[str] = None) -> List[Dict[str, Any]]:
+    """The boxes, found by words; with a workspace (a product's title), only the ones marked for it."""
+    space_id = space_of(workspace, profile)["id"] if workspace else ""
+    return cloud.call("materials/boxes", {"q": q, "spaceId": space_id}, profile).get("boxes", [])
+
+
+def box(code_or_id: str, profile: Optional[str] = None) -> Dict[str, Any]:
+    """One box, by its id (x-…) or any code on its label."""
+    ref = (code_or_id or "").strip()
+    if not ref:
+        raise ValueError("name a box: its id or the code on its label")
+    if not ref.startswith("x-"):
+        got = resolve(ref, profile)
+        if got.get("status") != "box":
+            raise ValueError(f"“{ref}” is not a box's code (it is {got.get('status', 'unknown')})")
+        ref = got["id"]
+    return cloud.call("materials/box", {"id": ref}, profile)
 
 
 def space_of(title: str, profile: Optional[str] = None) -> Dict[str, Any]:

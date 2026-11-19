@@ -188,6 +188,16 @@ def stock_article(article_id: str):
     return run(mt.article, article_id)
 
 
+@app.get("/api/boxes")
+def stock_boxes():
+    return run(mt.boxes, request.args.get("q", ""), request.args.get("workspace", ""))
+
+
+@app.get("/api/boxes/<ref>")
+def stock_box(ref: str):
+    return run(mt.box, ref)
+
+
 @app.get("/api/codes/resolve")
 def resolve_code():
     return run(mt.resolve, request.args.get("code", ""))

@@ -44,7 +44,8 @@ server = MCPServer(
         "revision: revisions(), diff(), tag_revision(), restore(). Files the "
         "person drops for you are in inbox(); read them with read_file(). "
         "Parts: stock(), resolve_code(), link_article(), bom(), "
-        "reserve_parts(), release_parts(), return_parts()."
+        "reserve_parts(), release_parts(), return_parts(). Boxes (read "
+        "only): boxes(), box()."
     ),)
 
 web.add_core_tools(server)
@@ -195,10 +196,29 @@ def stock_article(article: str) -> dict:
 
 
 @server.tool()
+def boxes(query: str = "", workspace: str = "") -> list:
+    """The organisation's boxes (cartons, bags, drawers with a large label):
+    name, kind, where it is (place, or the box it sits in), the workspace it
+    is marked for, and how many links and files it keeps. Search by words;
+    give a workspace (a product's title) for only its boxes."""
+    return _get("/api/boxes?" + urllib.parse.urlencode(_clean(q=query, workspace=workspace)))
+
+
+@server.tool()
+def box(box: str) -> dict:
+    """One box, by its id (x-…) or the code on its label: the boxes it sits
+    in, what it holds (units with what is installed in them, counted parts,
+    other boxes), its links (firmware, CAD, schematic, datasheet, docs, repo)
+    and its files, and what happened to it. Read only: parts are checked in
+    and out on a phone, at the box."""
+    return _get(f"/api/boxes/{_q(box)}")
+
+
+@server.tool()
 def resolve_code(code: str) -> dict:
-    """What a code points at: one of our labels (HTTPS://MAKER-5.CLOUD/T/…),
+    """What a code points at: one of our labels (HTTPS://MAKER5.CLOUD/T/…),
     an EAN/GTIN, a manufacturer's QR text, nfc:<uid>. Returns its status
-    (article, unit, blank, unknown) and the id."""
+    (article, unit, box, blank, unknown) and the id."""
     return _get("/api/codes/resolve?" + urllib.parse.urlencode({"code": code}))
 
 

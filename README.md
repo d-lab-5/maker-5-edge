@@ -50,7 +50,10 @@ blocks with their supply (there, in hand, to buy), software modules with
 their versions, and, after a preview, the articles the stock lacks, proposed
 in the cloud for an admin to accept on Materials. The **Hardware** tab is the
 canvas: place the blocks, which get the pins of their part
-(`maker_5_edge/parts/library.json`), and click two pins to wire them. Pins,
+(`maker_5_edge/parts/library.json`), and click two pins to wire them. A block can take a part of the Fritzing parts library (**Fritzing** beside
+it): its real pins and its breadboard picture, fetched from GitHub when you
+pick it and kept in `mymaker5docs/fritzing/`. The library is CC BY-SA 3.0, so
+it is never part of this repository, and the canvas credits it. Pins,
 wires and positions are in the model, so they sync and the chat can read and
 propose them (ADR-0014 in maker-5-shared).
 

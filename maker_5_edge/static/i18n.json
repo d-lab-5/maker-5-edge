@@ -222,7 +222,19 @@
   "bom.proposeFailed": "Proposing articles failed: {why}",
   "hw.full": "Full screen",
   "hw.unfull": "Leave full screen",
-  "help.hw.full": "The canvas on the whole screen; Esc leaves."
+  "help.hw.full": "The canvas on the whole screen; Esc leaves.",
+  "hw.fritzing": "Fritzing",
+  "help.hw.fritzing": "Give the block a part of the Fritzing library: its real pins and its picture.",
+  "hw.fzCredit": "Parts and pictures from the Fritzing parts library,",
+  "hw.fzFrom": "Picture from the Fritzing parts library:",
+  "hw.fzFor": "A Fritzing part for {name}",
+  "hw.fzHint": "Searched in the Fritzing parts library on GitHub (CC BY-SA 3.0). Only the part you pick is fetched; its pins replace the block's, and a wired pin must stay.",
+  "hw.fzSearch": "words of the part's name",
+  "hw.fzFind": "Search",
+  "hw.fzUse": "Use this part",
+  "hw.fzNone": "No part of that name. Fewer or other words?",
+  "hw.fzPins": "{n} pins",
+  "hw.fzUsed": "{title}: its pins are on the block now."
  },
  "de": {
   "core.theme": "Design",
@@ -447,7 +459,19 @@
   "bom.proposeFailed": "Artikel vorschlagen ging nicht: {why}",
   "hw.full": "Vollbild",
   "hw.unfull": "Vollbild verlassen",
-  "help.hw.full": "Die Fläche auf dem ganzen Bildschirm; Esc beendet."
+  "help.hw.full": "Die Fläche auf dem ganzen Bildschirm; Esc beendet.",
+  "hw.fritzing": "Fritzing",
+  "help.hw.fritzing": "Dem Block ein Bauteil der Fritzing-Bibliothek geben: seine echten Pins und sein Bild.",
+  "hw.fzCredit": "Bauteile und Bilder aus der Fritzing-Bauteilbibliothek,",
+  "hw.fzFrom": "Bild aus der Fritzing-Bauteilbibliothek:",
+  "hw.fzFor": "Ein Fritzing-Bauteil für {name}",
+  "hw.fzHint": "Gesucht in der Fritzing-Bauteilbibliothek auf GitHub (CC BY-SA 3.0). Nur das gewählte Bauteil wird geholt; seine Pins ersetzen die des Blocks, ein verbundener Pin muss bleiben.",
+  "hw.fzSearch": "Wörter aus dem Namen des Bauteils",
+  "hw.fzFind": "Suchen",
+  "hw.fzUse": "Dieses Bauteil verwenden",
+  "hw.fzNone": "Kein Bauteil dieses Namens. Weniger oder andere Wörter?",
+  "hw.fzPins": "{n} Pins",
+  "hw.fzUsed": "{title}: seine Pins sind jetzt am Block."
  },
  "fr": {
   "core.theme": "thème",
@@ -672,7 +696,19 @@
   "bom.proposeFailed": "La proposition d'articles a échoué : {why}",
   "hw.full": "Plein écran",
   "hw.unfull": "Quitter le plein écran",
-  "help.hw.full": "Le plan sur tout l'écran ; Échap pour sortir."
+  "help.hw.full": "Le plan sur tout l'écran ; Échap pour sortir.",
+  "hw.fritzing": "Fritzing",
+  "help.hw.fritzing": "Donner au bloc une pièce de la bibliothèque Fritzing : ses vraies broches et son image.",
+  "hw.fzCredit": "Pièces et images de la bibliothèque de pièces Fritzing,",
+  "hw.fzFrom": "Image de la bibliothèque de pièces Fritzing :",
+  "hw.fzFor": "Une pièce Fritzing pour {name}",
+  "hw.fzHint": "Recherche dans la bibliothèque de pièces Fritzing sur GitHub (CC BY-SA 3.0). Seule la pièce choisie est récupérée ; ses broches remplacent celles du bloc, une broche reliée doit rester.",
+  "hw.fzSearch": "mots du nom de la pièce",
+  "hw.fzFind": "Chercher",
+  "hw.fzUse": "Utiliser cette pièce",
+  "hw.fzNone": "Aucune pièce de ce nom. Moins de mots, ou d'autres ?",
+  "hw.fzPins": "{n} broches",
+  "hw.fzUsed": "{title} : ses broches sont maintenant sur le bloc."
  },
  "edge": {
   "de": {

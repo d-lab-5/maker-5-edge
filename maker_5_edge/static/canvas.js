@@ -30,16 +30,18 @@
 
   /** Which side and row a pin sits on: a long header odd left and even right,
    *  as it is on the board; a small part its first half left. */
+  const IMG = 110;                                  // room for a Fritzing part's picture
   function layout(b) {
     const pins = b.pins;
+    const w = b.fritzing ? W + IMG : W;
     const header = pins.length >= 20;
     const left = [], right = [];
     pins.forEach((p, i) => ((header ? p.n % 2 === 1 : i < Math.ceil(pins.length / 2)) ? left : right).push(p));
     const rows = Math.max(left.length, right.length, 1);
     const at = {};
     left.forEach((p, i) => { at[p.id] = { x: 0, y: HEAD + PAD + i * ROW + ROW / 2, side: -1 }; });
-    right.forEach((p, i) => { at[p.id] = { x: W, y: HEAD + PAD + i * ROW + ROW / 2, side: 1 }; });
-    return { at, h: HEAD + PAD * 2 + rows * ROW };
+    right.forEach((p, i) => { at[p.id] = { x: w, y: HEAD + PAD + i * ROW + ROW / 2, side: 1 }; });
+    return { at, w, h: Math.max(HEAD + PAD * 2 + rows * ROW, b.fritzing ? HEAD + IMG + PAD * 2 : 0) };
   }
 
   async function api(method, path, payload) {
@@ -80,8 +82,11 @@
             <button data-place="${esc(b.id)}" data-help="help.hw.place">${esc(t("hw.place"))}</button></li>`).join("")}</ul>`
             : `<p class="note">${esc(data.blocks.length ? t("hw.allPlaced") : t("hw.noBlocks"))}</p>`}
           ${placed.length ? `<h3>${esc(t("hw.placed"))}</h3><ul>${placed.map((b) => `<li><span>${esc(b.name)}</span>
-            <button data-pins="${esc(b.id)}" data-help="help.hw.pins">${esc(t("hw.pins"))}</button></li>`).join("")}</ul>` : ""}
+            <span><button data-fz="${esc(b.id)}" data-help="help.hw.fritzing">${esc(t("hw.fritzing"))}</button>
+            <button data-pins="${esc(b.id)}" data-help="help.hw.pins">${esc(t("hw.pins"))}</button></span></li>`).join("")}</ul>` : ""}
           <p class="note">${esc(t("hw.wires", { n: data.wires.length }))}</p>
+          ${data.blocks.some((b) => b.fritzing) ? `<p class="note hw-credit">${esc(t("hw.fzCredit"))}
+            <a href="https://github.com/fritzing/fritzing-parts" target="_blank" rel="noreferrer">fritzing-parts</a>, CC BY-SA 3.0</p>` : ""}
         </aside>
         <div class="hw-stage"></div>
       </div>`;
@@ -122,8 +127,14 @@
     for (const g of Object.values(geo)) {
       const b = g.b;
       const part = el("g", { class: `hw-part${b.supply === "to-buy" ? " to-buy" : ""}`, transform: `translate(${b.x},${b.y})`, "data-block": b.id }, partsG);
-      el("rect", { width: W, height: g.h, rx: 6, class: "hw-body" }, part);
-      el("rect", { width: W, height: HEAD, rx: 6, class: "hw-head" }, part);
+      el("rect", { width: g.w, height: g.h, rx: 6, class: "hw-body" }, part);
+      el("rect", { width: g.w, height: HEAD, rx: 6, class: "hw-head" }, part);
+      if (b.fritzing) {
+        // the part's breadboard picture, between its pin columns; an <image> runs nothing
+        const img = el("image", { x: (g.w - IMG) / 2, y: HEAD + PAD, width: IMG, height: g.h - HEAD - PAD * 2,
+          href: `/api/fritzing/image?path=${encodeURIComponent(b.fritzing)}`, preserveAspectRatio: "xMidYMid meet", class: "hw-img" }, part);
+        el("title", {}, img).textContent = `${t("hw.fzFrom")} ${b.fritzing} (CC BY-SA 3.0)`;
+      }
       const title = el("text", { x: 10, y: 18, class: "hw-name" }, part);
       title.textContent = b.name.length > 26 ? b.name.slice(0, 25) + "…" : b.name;
       el("title", {}, title).textContent = b.name + (b.supply ? ` · ${t(`supply.${b.supply}`)}` : "");
@@ -231,7 +242,7 @@
       if (!placed.length) return;
       const xs = placed.map((b) => b.x), ys = placed.map((b) => b.y);
       const r = svg.getBoundingClientRect();
-      const w = Math.max(...xs) + W - Math.min(...xs) + 80, h = Math.max(...placed.map((b) => b.y + geo[b.id].h)) - Math.min(...ys) + 80;
+      const w = Math.max(...placed.map((b) => b.x + geo[b.id].w)) - Math.min(...xs) + 80, h = Math.max(...placed.map((b) => b.y + geo[b.id].h)) - Math.min(...ys) + 80;
       const k = Math.min(3, Math.max(0.3, Math.min(r.width / w, r.height / h)));
       C.view = { k, x: Math.min(...xs) - 40, y: Math.min(...ys) - 40 };
       apply();
@@ -249,6 +260,7 @@
       if (await api("POST", `${C.base}/canvas/place`, { block: b.dataset.place, x, y })) await reload();
     });
     box.querySelectorAll("[data-pins]").forEach((b) => b.onclick = () => pinsDialog(data.blocks.find((x) => x.id === b.dataset.pins)));
+    box.querySelectorAll("[data-fz]").forEach((b) => b.onclick = () => fritzingDialog(data.blocks.find((x) => x.id === b.dataset.fz)));
   }
 
   function wireDialog(w) {
@@ -294,6 +306,60 @@
         });
         if (await api("POST", `${C.base}/canvas/pins`, { block: b.id, pins })) await reload();
       };
+    });
+  }
+
+  /** A part of the Fritzing library for a block: search by name, look at
+   *  its pins and picture, use it (fritzing.py fetches only what is picked). */
+  function fritzingDialog(b, q) {
+    if (!b) return;
+    const words = q ?? b.name.replace(/\(.*?\)/g, " ").split(/\s+/).filter((w) => w.length > 1).slice(0, 2).join(" ");
+    core.dialog(t("hw.fzFor", { name: b.name }), `
+      <p class="note">${esc(t("hw.fzHint"))}</p>
+      <label><input name="q" value="${esc(words)}" placeholder="${esc(t("hw.fzSearch"))}"></label>
+      <div class="fz-results"><p class="note">…</p></div>
+      <div class="fz-pick"></div>
+      <div class="actions"><button value="cancel" formnovalidate>${esc(t("model.cancel"))}</button>
+        <button value="search">${esc(t("hw.fzFind"))}</button>
+        <button value="ok" class="primary" disabled>${esc(t("hw.fzUse"))}</button></div>`, (form, dlg) => {
+      let chosen = null;
+      const results = form.querySelector(".fz-results"), pick = form.querySelector(".fz-pick");
+      const useBtn = form.querySelector('button[value="ok"]');
+      const find = async () => {
+        results.innerHTML = `<p class="note">…</p>`;
+        try {
+          const hits = await core.api("GET", `/api/fritzing/search?q=${encodeURIComponent(form.querySelector('[name="q"]').value)}`);
+          results.innerHTML = hits.length ? `<ul>${hits.map((h) => `<li><button type="button" class="linkish" data-path="${esc(h.path)}">${esc(h.name)}</button>
+            <small class="note">${esc(h.folder)}</small></li>`).join("")}</ul>` : `<p class="note">${esc(t("hw.fzNone"))}</p>`;
+          results.querySelectorAll("[data-path]").forEach((x) => x.onclick = () => show(x.dataset.path));
+        } catch (err) { results.innerHTML = `<p class="note warn">${esc(failed(err))}</p>`; }
+      };
+      const show = async (path) => {
+        pick.innerHTML = `<p class="note">…</p>`;
+        try {
+          const p = await core.api("GET", `/api/fritzing/part?path=${encodeURIComponent(path)}`);
+          chosen = p;
+          useBtn.disabled = false;
+          pick.innerHTML = `<div class="fz-part">
+            <img src="/api/fritzing/image?path=${encodeURIComponent(p.path)}" alt="">
+            <div><strong>${esc(p.title)}</strong><br><small class="note">${esc(p.author)} · ${esc(p.license)} ·
+              <a href="${esc(p.source)}" target="_blank" rel="noreferrer">${esc(p.path)}</a></small>
+              <p class="note">${esc(t("hw.fzPins", { n: p.pins.length }))}: ${p.pins.map((x) => esc(x.name)).join(", ")}</p></div></div>`;
+        } catch (err) { pick.innerHTML = `<p class="note warn">${esc(failed(err))}</p>`; }
+      };
+      form.onsubmit = async (ev) => {
+        const v = ev.submitter && ev.submitter.value;
+        if (v === "cancel") { form.onsubmit = null; return; }
+        ev.preventDefault();
+        if (v === "search" || !chosen) { find(); return; }
+        form.onsubmit = null;
+        dlg.close();
+        if (await api("POST", `${C.base}/canvas/fritzing`, { block: b.id, path: chosen.path })) {
+          core.toast(t("hw.fzUsed", { title: chosen.title }));
+          await reload();
+        }
+      };
+      find();
     });
   }
 

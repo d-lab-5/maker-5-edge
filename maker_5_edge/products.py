@@ -467,7 +467,8 @@ class Products:
                            "kind": _local(g.value(b, M5.blockType)).lower() if g.value(b, M5.blockType) else "",
                            "x": None if x is None else int(x), "y": None if y is None else int(y),
                            "supply": next((k for k, v in SUPPLY.items() if v == supply), ""),
-                           "article": _local(a) if a is not None else "", "pins": pins(b)})
+                           "article": _local(a) if a is not None else "", "pins": pins(b),
+                           "fritzing": str(g.value(b, M5.fritzingPart) or "")})
         wires = []
         for w in sorted(set(g.subjects(RDF.type, M5.Wire)), key=str):
             ends = sorted(g.objects(w, M5.wireEnd), key=str)
@@ -508,6 +509,23 @@ class Products:
     def set_pins(self, p: str, block: str, pins: List[Dict[str, Any]]) -> Dict:
         """A block's pins, numbered, named and with a role. A pin a wire still
         uses cannot go; rename it instead."""
+        clean = self._clean_pins(pins)
+        self._change(p, lambda g: self._apply_pins(g, block, clean))
+        return {"id": block, "pins": len(clean)}
+
+    def use_part(self, p: str, block: str, path: str, pins: List[Dict[str, Any]]) -> Dict:
+        """A block takes a Fritzing part (fritzing.py; ADR-0016): its pins, and
+        the part's file name in m5:fritzingPart, in one revision."""
+        clean = self._clean_pins(pins)
+
+        def apply(g: Graph) -> None:
+            self._apply_pins(g, block, clean)
+            g.set((self._find(g, block, "block"), M5.fritzingPart, Literal(path)))
+        self._change(p, apply)
+        return {"id": block, "pins": len(clean), "fritzing": path}
+
+    @staticmethod
+    def _clean_pins(pins: List[Dict[str, Any]]) -> Dict[int, Dict[str, Any]]:
         clean: Dict[int, Dict[str, Any]] = {}
         for i, pin in enumerate(pins or [], start=1):
             n = int(pin.get("n") or i)
@@ -520,26 +538,25 @@ class Products:
             clean[n] = {"name": name, "role": _key(role, PIN_ROLES, "a pin's role") if role else None}
         if len(clean) > MAX_PINS:
             raise ValueError(f"at most {MAX_PINS} pins on a block")
+        return clean
 
-        def apply(g: Graph) -> None:
-            b = self._find(g, block, "block")
-            have = {int(g.value(pin, M5.pinNumber) or 0): pin for pin in g.subjects(M5.pinOf, b)}
-            for n, pin in have.items():
-                if n not in clean:
-                    if any(True for _ in g.subjects(M5.wireEnd, pin)):
-                        raise ValueError(f"pin {n} ({_name(g, pin)}) is wired: remove its wire first")
-                    g.remove((pin, None, None))
-            for n, v in clean.items():
-                pin = have.get(n) or self._pin_iri(block, n)
-                g.set((pin, RDF.type, M5.Pin))
-                g.set((pin, M5.pinOf, b))
-                g.set((pin, M5.pinNumber, Literal(n, datatype=XSD.integer)))
-                g.set((pin, SCHEMA.name, Literal(v["name"])))
-                g.remove((pin, M5.pinRole, None))
-                if v["role"] is not None:
-                    g.add((pin, M5.pinRole, v["role"]))
-        self._change(p, apply)
-        return {"id": block, "pins": len(clean)}
+    def _apply_pins(self, g: Graph, block: str, clean: Dict[int, Dict[str, Any]]) -> None:
+        b = self._find(g, block, "block")
+        have = {int(g.value(pin, M5.pinNumber) or 0): pin for pin in g.subjects(M5.pinOf, b)}
+        for n, pin in have.items():
+            if n not in clean:
+                if any(True for _ in g.subjects(M5.wireEnd, pin)):
+                    raise ValueError(f"pin {n} ({_name(g, pin)}) is wired: remove its wire first")
+                g.remove((pin, None, None))
+        for n, v in clean.items():
+            pin = have.get(n) or self._pin_iri(block, n)
+            g.set((pin, RDF.type, M5.Pin))
+            g.set((pin, M5.pinOf, b))
+            g.set((pin, M5.pinNumber, Literal(n, datatype=XSD.integer)))
+            g.set((pin, SCHEMA.name, Literal(v["name"])))
+            g.remove((pin, M5.pinRole, None))
+            if v["role"] is not None:
+                g.add((pin, M5.pinRole, v["role"]))
 
     def _pin(self, g: Graph, pin: str) -> URIRef:
         n = _iri("pin", pin)

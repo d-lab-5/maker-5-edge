@@ -31,6 +31,7 @@ from pathlib import Path
 from flask import abort, jsonify, render_template, request
 
 from . import bom_import
+from . import fritzing as fz
 from . import inbox as ib
 from . import materials as mt
 from . import parts
@@ -162,6 +163,8 @@ def run(fn, *args, **kwargs):
     except cloud.CloudError as e:
         # the cloud refused (422: not free, not taken) or failed: say its words
         return jsonify({"errors": [str(e.payload.get("message") or e) if e.payload else str(e)]}), 422 if e.status == 422 else 502
+    except fz.FritzingError as e:
+        return jsonify({"errors": [str(e)]}), 502
     except (ValueError, TypeError) as e:
         return jsonify({"errors": [str(e)]}), 400
 
@@ -302,6 +305,47 @@ def canvas_place(p: str):
 def canvas_pins(p: str):
     b = body()
     return run(products().set_pins, p, str(b.get("block") or ""), b.get("pins") or [])
+
+
+# ---- parts from the Fritzing library (fritzing.py; ADR-0016)
+
+@app.get("/api/fritzing/search")
+def fritzing_search():
+    return run(fz.search, request.args.get("q", ""), request.args.get("limit", 30, type=int))
+
+
+@app.get("/api/fritzing/part")
+def fritzing_part():
+    return run(fz.part, request.args.get("path", ""))
+
+
+@app.get("/api/fritzing/image")
+def fritzing_image():
+    """A part's breadboard picture. The page shows it as an <image>, where an
+    SVG runs nothing; the policy below says so to any other reader too."""
+    try:
+        svg = fz.image(request.args.get("path", ""))
+    except (ValueError, fz.FritzingError):
+        abort(404)
+    if svg is None:
+        abort(404)
+    return app.response_class(svg, mimetype="image/svg+xml", headers={
+        "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; img-src data:",
+        "X-Content-Type-Options": "nosniff", "Cache-Control": "private, max-age=86400"})
+
+
+@app.post("/api/products/<p>/canvas/fritzing")
+def canvas_fritzing(p: str):
+    """A block takes a Fritzing part: its pins (and the part's name in the model)."""
+    b = body()
+
+    def used():
+        part = fz.part(str(b.get("path") or ""))
+        known = parts.pins_for(part["title"])
+        pins = parts.physical(part["pins"], known["pins"]) if known["title"] else part["pins"]
+        return {**products().use_part(p, str(b.get("block") or ""), part["path"], pins),
+                "title": part["title"], "author": part["author"], "license": part["license"]}
+    return run(used)
 
 
 @app.post("/api/products/<p>/wires")

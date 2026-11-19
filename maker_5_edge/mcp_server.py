@@ -46,7 +46,8 @@ server = MCPServer(
         "Parts: stock(), resolve_code(), link_article(), bom(), "
         "reserve_parts(), release_parts(), return_parts(). Boxes (read "
         "only): boxes(), box(). A BOM in Markdown: import_bom(). Hardware "
-        "wiring: canvas(), place(), set_pins(), wire(); remove a wire with remove()."
+        "wiring: canvas(), place(), set_pins(), wire(); remove a wire with remove(). "
+        "Fritzing parts: fritzing_search(), fritzing_part(), fritzing_use()."
     ),)
 
 web.add_core_tools(server)
@@ -258,6 +259,27 @@ def canvas(product: str) -> dict:
     """The hardware canvas: each block's place and pins (ids <block>.<n>,
     names like GPIO17, roles), and the wires between pins."""
     return _get(_p(product) + "/canvas")
+
+
+@server.tool()
+def fritzing_search(q: str) -> list:
+    """Parts of the Fritzing parts library whose name has every word: [{path,
+    name, folder}], core parts first. The library is fetched from GitHub."""
+    return _get("/api/fritzing/search?" + urllib.parse.urlencode({"q": q}))
+
+
+@server.tool()
+def fritzing_part(path: str) -> dict:
+    """One Fritzing part: its title, authors, licence and pins [{n, name, role}]."""
+    return _get("/api/fritzing/part?" + urllib.parse.urlencode({"path": path}))
+
+
+@server.tool()
+def fritzing_use(product: str, block: str, path: str) -> dict:
+    """Propose that a block takes a Fritzing part: its pins replace the
+    block's (a wired pin must stay) and the canvas shows its picture."""
+    return act(f"Give {block} the Fritzing part {path}", "POST", _p(product) + "/canvas/fritzing",
+               {"block": block, "path": path})
 
 
 @server.tool()

@@ -77,7 +77,7 @@ CHAT_ALLOWED: List[Tuple[str, str]] = [
     ("DELETE", r"/api/products/[a-z][a-z0-9-]{0,39}/items/(b|m|i|pr|w)-[a-z0-9]{8}"),
     # a BOM into the model, and the hardware canvas (ADR-0014 in maker-5-shared)
     ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/import/bom/apply"),
-    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/canvas/(place|pins)"),
+    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/canvas/(place|pins|fritzing)"),
     ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/wires(/w-[a-z0-9]{8})?"),
     ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/items/(b|m)-[a-z0-9]{8}/article"),
     # parts from the workspace's stock (ADR-0010 in maker-5-shared)
@@ -142,6 +142,10 @@ part has none or the wrong ones (set_pins), then the wires (wire(), with a
 colour: red for power, black for ground). Check a pin's name and role in
 canvas() before wiring it: never guess a pin id. Say which wires you would
 draw and why before proposing them; a BOM in Markdown is import_bom().
+A part of the Fritzing parts library gives a block its real pinout:
+fritzing_search() finds parts by words of their name ("PC817", "Raspberry Pi
+B rev2"), fritzing_part() shows one's pins, fritzing_use() proposes it for a
+block. Prefer it to inventing pins; name the part you chose.
 
 Privacy: what this edge keeps private never reaches you. Names you see are
 the {tenant}'s; use them only to answer.""".format(

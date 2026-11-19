@@ -8,6 +8,11 @@ files given to the chat (inbox.py).
 
     maker-5-edge-web                       # http://127.0.0.1:8773
     maker-5-edge-web --port 9000
+    maker-5-edge-web --dir ~/maker5        # where mymaker5docs/ would be
+
+Each cloud connection has its own folder (ADR-0013 in maker-5-shared):
+mymaker5docs/prod/ and mymaker5docs/stage/, switched in the left bar. The
+workspaces are the cloud's; each gets its folder here when it is listed.
     python3 -m maker_5_edge.app            # the same, from a checkout
 
 The page, stop, restart, update and the About box come from core.server; the
@@ -18,17 +23,26 @@ Products, so the Maker-5 shapes refuse a broken model (422).
 from __future__ import annotations
 
 import argparse
+import os
 import sys
+import time
+from pathlib import Path
 
 from flask import abort, jsonify, render_template, request
 
+from . import bom_import
 from . import inbox as ib
+from . import materials as mt
+from . import parts
 from . import products as pr
 from . import revisions as rv
 from . import selection as sel
 from .core import server
 from .core import workspace as ws
+from .edge import cloud
 from .edge import knowledge as kn
+from .edge import settings as edge_settings
+from .edge import sync as edge_sync
 
 app = server.create_app(__name__)
 
@@ -76,6 +90,64 @@ def products() -> pr.Products:
     return _products
 
 
+def _switched() -> None:
+    """Another connection is current: its own folder, nothing open from the last one."""
+    global _products
+    _products = None
+    sel.set()
+    try:
+        pr.migrate_layout()
+    except OSError:
+        pass
+
+
+edge_routes.ON_SWITCH.append(_switched)
+
+
+def _cloud_site() -> str:
+    name = cloud.active_profile()
+    return str(cloud.load_state(name).get("site") or (getattr(edge_settings, "ENVIRONMENTS", {}) or {}).get(name) or "")
+
+
+# How often the page's list asks the cloud for its workspaces again, so a
+# rename or a new workspace there shows here without a restart.
+TENANT_FRESH_S = 30
+_tenant_seen: dict = {}
+
+
+def cloud_title(space: dict) -> str:
+    """A workspace's name as the cloud shows it: the shared one, while it keeps
+    its default name, is "Shared" (the cloud translates it)."""
+    name = space.get("name") or ""
+    return "Shared" if space.get("kind") == "shared" and name in ("Everyone", "Shared") else name
+
+
+def workspaces() -> list:
+    """The products here, as the cloud's workspaces: each workspace of the
+    current connection gets its folder (adopt), its title is the cloud's name
+    (a label: the folder and every id stay), and a product whose workspace was
+    removed in the cloud is marked gone (its files stay)."""
+    pp = products()
+    gone = set()
+    name = cloud.active_profile()
+    if cloud.per_connection() and name in cloud.linked_profiles():
+        try:
+            if time.time() - _tenant_seen.get(name, 0) > TENANT_FRESH_S:
+                cloud.tenant(name, refresh=True)
+                _tenant_seen[name] = time.time()
+            listed = edge_sync.listing(pp.kb)
+            pp.adopt(listed)
+            gone = {s["graph"] for s in listed if s["gone"]}
+            titles = {p["product"]: p["title"] for p in pp.products()}
+            for s in listed:
+                want = cloud_title(s)
+                if not s["gone"] and want and s["graph"] in titles and titles[s["graph"]] != want:
+                    pp.set_product(s["graph"], title=want)
+        except cloud.CloudError:
+            pass
+    return [{**p, "gone": p["product"] in gone} for p in pp.products()]
+
+
 def run(fn, *args, **kwargs):
     try:
         return jsonify(fn(*args, **kwargs))
@@ -83,6 +155,13 @@ def run(fn, *args, **kwargs):
         return jsonify({"errors": [str(e)]}), 404
     except kn.Invalid as e:
         return jsonify({"errors": e.messages}), 422
+    except mt.NoSpace as e:
+        return jsonify({"errors": [str(e)]}), 409
+    except cloud.NotLinked as e:
+        return jsonify({"errors": [f"this edge is not linked to a cloud yet: {e}"]}), 409
+    except cloud.CloudError as e:
+        # the cloud refused (422: not free, not taken) or failed: say its words
+        return jsonify({"errors": [str(e.payload.get("message") or e) if e.payload else str(e)]}), 422 if e.status == 422 else 502
     except (ValueError, TypeError) as e:
         return jsonify({"errors": [str(e)]}), 400
 
@@ -113,11 +192,15 @@ def set_selection():
 
 @app.get("/api/products")
 def list_products():
-    return run(products().products)
+    return run(workspaces)
 
 
 @app.post("/api/products")
 def new_product():
+    if cloud.per_connection():
+        site = _cloud_site()
+        return jsonify({"errors": [f"a workspace is made in the cloud ({site or 'its Settings'}), by an admin "
+                                   "of the organisation; it then appears here"], "site": site}), 409
     return run(products().new_product, **fields("title"))
 
 
@@ -128,7 +211,11 @@ def model(p: str):
 
 @app.post("/api/products/<p>")
 def set_product(p: str):
-    return run(products().set_product, p, **fields("title", "status"))
+    b = fields("title", "status")
+    if cloud.per_connection() and "title" in b:
+        return jsonify({"errors": ["a workspace is renamed in the cloud; its new name shows here by itself"],
+                        "site": _cloud_site()}), 409
+    return run(products().set_product, p, **b)
 
 
 @app.post("/api/products/<p>/blocks")
@@ -161,6 +248,112 @@ def remove(p: str, item: str):
     return run(products().remove, p, item)
 
 
+@app.post("/api/products/<p>/items/<item>/article")
+def link_article(p: str, item: str):
+    """Which article of the stock a block or module is built from (ADR-0010)."""
+    return run(products().link_article, p, item, **fields("article", "quantity"))
+
+
+# ---- a BOM into the model, and the hardware canvas (ADR-0014)
+
+def _bom_text() -> str:
+    b = body()
+    if b.get("inbox"):
+        out, offset = [], 0
+        while True:
+            part = ib.read(str(b["inbox"]), offset)
+            out.append(part["text"])
+            offset += len(part["text"])
+            if not part["more"] or offset > 400_000:
+                return "".join(out)
+    return str(b.get("text") or "")
+
+
+@app.post("/api/products/<p>/import/bom")
+def bom_preview(p: str):
+    """What importing this BOM (text, or a file in the inbox) would make. Writes nothing."""
+    return run(lambda: bom_import.preview(products(), p, _bom_text()))
+
+
+@app.post("/api/products/<p>/import/bom/apply")
+def bom_apply(p: str):
+    """Make what a reviewed preview says: proposed articles in the cloud, then one revision."""
+    return run(bom_import.apply, products(), p, body().get("preview") or {})
+
+
+@app.get("/api/products/<p>/canvas")
+def canvas(p: str):
+    return run(products().canvas, p)
+
+
+@app.post("/api/products/<p>/canvas/place")
+def canvas_place(p: str):
+    b = body()
+
+    def placed():
+        pp = products()
+        block = str(b.get("block") or "")
+        name = next((x["name"] for x in pp.model(p)["blocks"] if x["id"] == block), "")
+        return pp.place(p, block, b.get("x", 0), b.get("y", 0), default_pins=parts.pins_for(name)["pins"])
+    return run(placed)
+
+
+@app.post("/api/products/<p>/canvas/pins")
+def canvas_pins(p: str):
+    b = body()
+    return run(products().set_pins, p, str(b.get("block") or ""), b.get("pins") or [])
+
+
+@app.post("/api/products/<p>/wires")
+def add_wire(p: str):
+    b = body()
+    return run(products().add_wire, p, str(b.get("from") or ""), str(b.get("to") or ""),
+               str(b.get("color") or ""), str(b.get("interface") or ""))
+
+
+@app.post("/api/products/<p>/wires/<wire>")
+def set_wire(p: str, wire: str):
+    return run(products().set_wire, p, wire, **fields("color", "interface"))
+
+
+# ---- parts: the workspace's stock in the cloud (materials.py)
+
+@app.get("/api/stock")
+def stock():
+    return run(mt.stock, request.args.get("q", ""), request.args.get("category", ""))
+
+
+@app.get("/api/stock/<article_id>")
+def stock_article(article_id: str):
+    return run(mt.article, article_id)
+
+
+@app.get("/api/boxes")
+def stock_boxes():
+    return run(mt.boxes, request.args.get("q", ""), request.args.get("workspace", ""))
+
+
+@app.get("/api/boxes/<ref>")
+def stock_box(ref: str):
+    return run(mt.box, ref)
+
+
+@app.get("/api/codes/resolve")
+def resolve_code():
+    return run(mt.resolve, request.args.get("code", ""))
+
+
+@app.get("/api/products/<p>/bom")
+def bom(p: str):
+    return run(mt.bom, products(), p)
+
+
+@app.post("/api/products/<p>/parts/<step>")
+def take_parts(p: str, step: str):
+    b = fields("article", "qty", "unit", "note")
+    return run(mt.take, products(), p, step, str(b.get("article", "")), b.get("qty"), b.get("unit"), str(b.get("note", "")))
+
+
 @app.post("/api/products/<p>/proposals")
 def propose(p: str):
     b = fields("title", "concerns", "agent")
@@ -178,6 +371,16 @@ def decide(p: str, item: str):
     return run(products().decide, p, item, **fields("decision", "note"))
 
 
+def _file_name(p: str) -> str:
+    """A download's name: the workspace's title as a slug ("door-bell"), not
+    its folder, which keeps the name it was first given."""
+    try:
+        title = next((x["title"] for x in products().products() if x["product"] == p), "")
+    except Exception:  # noqa: BLE001 - a name is never worth a failed download
+        title = ""
+    return cloud.space_slug(title) if title else p
+
+
 @app.get("/api/products/<p>/export.ttl")
 def export(p: str):
     try:
@@ -185,7 +388,7 @@ def export(p: str):
     except pr.NotFound:
         abort(404)
     return app.response_class(ttl, mimetype="text/turtle",
-                              headers={"Content-Disposition": f'attachment; filename="{p}.ttl"'})
+                              headers={"Content-Disposition": f'attachment; filename="{_file_name(p)}.ttl"'})
 
 
 # ---- history: every saved state, tags and baselines, compare, restore
@@ -201,7 +404,8 @@ def revision(p: str, ref: str):
         ttl = products().revision(p, ref)
     except pr.NotFound:
         abort(404)
-    return app.response_class(ttl, mimetype="text/turtle")
+    return app.response_class(ttl, mimetype="text/turtle",
+                              headers={"Content-Disposition": f'inline; filename="{_file_name(p)}-r{ref}.ttl"'})
 
 
 @app.get("/api/products/<p>/diff")
@@ -261,14 +465,37 @@ def inbox_remove(fid: str):
 
 # ------------------------------------------------------------------ main ----
 
+DATA_DIR = "mymaker5docs"
+
+
+def _move_old_folder(old: Path, new: Path) -> None:
+    """The products of an edge from before connections had their own folders
+    (./mydocs/<product>/) are prod's now: ./mymaker5docs/prod/. Never
+    overwrites; an empty old folder is just removed."""
+    if not old.is_dir() or old.resolve() == new.resolve():
+        return
+    if not any(old.iterdir()):
+        old.rmdir()
+        return
+    target = new / "prod"
+    if target.exists():
+        print(f"  {old}/ kept: {target}/ exists already, move what you need by hand", flush=True)
+        return
+    new.mkdir(parents=True, exist_ok=True)
+    os.replace(old, target)
+    print(f"  moved {old}/ to {target}/ (prod's folder)", flush=True)
+
+
 def main(argv: list | None = None) -> int:
     ap = argparse.ArgumentParser(prog="maker-5-edge-web",
                                  description=__doc__.strip().splitlines()[0])
     server.add_server_args(ap)
-    ap.add_argument("--dir", default=ws.FOLDERS[ws.USER].name,
-                    help="where products and their files live (default: ./mydocs)")
+    ap.add_argument("--dir", default=DATA_DIR,
+                    help=f"where products and their files live, a folder per connection (default: ./{DATA_DIR})")
     args = ap.parse_args(sys.argv[1:] if argv is None else argv)
 
+    if args.dir == DATA_DIR:
+        _move_old_folder(Path(ws.FOLDERS[ws.USER].name), Path(DATA_DIR))
     ws.configure(user_dir=args.dir)
     # One folder per product (ADR-0003 in maker-5-shared): the edge layer's routes and first
     # start build kn.KnowledgeBase() when called, so binding it here gives

@@ -8,7 +8,7 @@
 {% block head %}
 <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon.svg') }}">
 <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
-<meta name="theme-color" content="#111614">
+<meta name="theme-color" content="#0f172a">
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 <link rel="stylesheet" href="/edge-static/edge.css">  <!-- edge layer -->
 <script src="/edge-static/edge.js" defer></script>
@@ -35,26 +35,28 @@
 <main class="layout">
 
   <aside class="side" id="side">
-    <h3 data-i18n="side.title" data-help="help.products">Products</h3>
+    <div id="edge-env" data-help="help.env"></div>  <!-- edge layer: prod or stage -->
+    <h3 data-i18n="side.title" data-help="help.products">Workspaces</h3>
     <div id="ws-list" class="ws-list"><p class="note" data-i18n="side.loading">loading…</p></div>
-    <details class="new-ws">
-      <summary data-i18n="side.new" data-help="help.new">New product</summary>
-      <label><span data-i18n="side.titleLabel">Title</span> <input id="np-title" type="text" placeholder="e.g. Weather box" data-i18n-placeholder="side.titlePh"></label>
-      <button id="np-make" class="primary" data-i18n="side.start">Start it</button>
-      <p class="note" data-i18n="side.orChat">Or ask in the chat: “a weather box: a sensor board, firmware, I2C between them”.</p>
-    </details>
+    <div class="new-ws">
+      <button id="ws-refresh" type="button" data-i18n="side.refresh" data-help="help.refresh">Refresh from the cloud</button>
+      <p class="note"><span data-i18n="side.inCloud">A new workspace is made in the cloud, by an admin.</span>
+        <a id="ws-cloud" href="#" target="_blank" rel="noopener noreferrer" hidden data-i18n="side.openCloud">Open the cloud</a></p>
+    </div>
   </aside>
 
   <section class="work">
     <nav class="tabs" role="tablist">
       <button data-tab="model" class="is-on" data-i18n="tab.model" data-help="help.model">Model</button>
+      <button data-tab="canvas" data-i18n="tab.canvas" data-help="help.canvas">Hardware</button>
       <button data-tab="proposals" data-i18n="tab.proposals" data-help="help.proposals">Proposals</button>
       <button data-tab="history" data-i18n="tab.history" data-help="help.history">History</button>
       <button data-tab="files" data-i18n="tab.files" data-help="help.files">Files</button>
     </nav>
-    <div id="tab-model" class="tab"><p class="note" data-i18n="model.choose">Choose or start a product.</p></div>
+    <div id="tab-model" class="tab"><p class="note" data-i18n="model.choose">Choose or start a workspace.</p></div>
     <div id="tab-proposals" class="tab" hidden></div>
     <div id="tab-history" class="tab" hidden></div>
+    <div id="tab-canvas" class="tab" hidden></div>
     <div id="tab-files" class="tab" hidden></div>
   </section>
 
@@ -62,10 +64,13 @@
   <section id="edge-chat" class="panel"></section>
 </main>
 <div id="help-tip" class="help-tip" role="tooltip" hidden></div>
-<div id="busy" class="busy" hidden role="status" aria-live="polite"><div class="busy__spin"></div><span data-i18n="busy">loading…</span></div>
+<div id="busy" class="busy" hidden role="status" aria-live="polite">  <!-- the cloud's loading card -->
+  <div class="busy__card"><span class="busy__glass" aria-hidden="true"></span><span class="busy__word" data-i18n="busy">loading…</span><i class="busy__bar" aria-hidden="true"></i></div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='i18n.js') }}"></script>
+<script src="{{ url_for('static', filename='canvas.js') }}"></script>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
 {% endblock %}

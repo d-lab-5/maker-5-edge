@@ -165,12 +165,14 @@ def test_every_string_is_in_english_german_and_french():
     for lang in ("de", "fr"):
         for k, v in table[lang].items():
             assert set(re.findall(r"\{(\w+)\}", v)) == set(re.findall(r"\{(\w+)\}", table["en"][k])), (lang, k)
-    js = (PKG / "static" / "app.js").read_text()
+    js = (PKG / "static" / "app.js").read_text() + (PKG / "static" / "canvas.js").read_text()
     html = (PKG / "templates" / "index.html").read_text()
     used = set(re.findall(r'(?<![\w.$])t\("([\w.]+)"', js))
     used |= set(re.findall(r'data-(?:i18n(?:-title|-placeholder)?|help)="([\w.]+)"', html + js))
     for tmpl, values in ((r"model\.add\.", ("block", "module", "interface")), (r"model\.ph\.", ("block", "module", "interface")),
                          (r"help\.add\.", ("block", "module", "interface")), (r"h\.via\.", rv.VIA),
-                         (r"state\.", ("proposed", "approved", "rejected")), (r"kind\.", ("electronic", "mechanical"))):
+                         (r"state\.", ("proposed", "approved", "rejected")), (r"kind\.", ("electronic", "mechanical")),
+                         (r"supply\.", ("there", "in-hand", "to-buy")), (r"role\.", ("power", "ground", "signal", "audio", "video", "data")),
+                         (r"hw\.c\.", ("red", "black", "yellow", "white", "blue", "green", "orange", "purple"))):
         used |= {tmpl.replace("\\", "") + v for v in values}
     assert used and not used - keys, sorted(used - keys)

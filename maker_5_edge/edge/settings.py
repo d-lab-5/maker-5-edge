@@ -19,8 +19,8 @@ PACKAGE = "maker_5_edge"
 TITLE = "Maker-5 Edge"
 KIND = "human"                 # human | iot | robot
 CLOUD_NAME = "Maker-5"          # "the Mediathek", "DigitalHome" …
-TENANT_NOUN = "workspace"        # what people call a tenant here
-SPACE_NOUN = "product"          # … and a space
+TENANT_NOUN = "organisation"     # what people call a tenant here
+SPACE_NOUN = "workspace"         # … and a space: a project or a product in development
 ENV = "MAKER5_EDGE"                 # MAKER5_EDGE_EDGE_STATE, MAKER5_EDGE_CHAT_CONFIRM …
 
 # The client id and scope this edge asks for when it pairs (DH-SPEC-100).
@@ -45,6 +45,20 @@ PER_LANGUAGE: List[str] = [
     "http://www.w3.org/2004/02/skos/core#prefLabel",
 ]
 
+# -- connections: prod and stage, each its own (ADR-0013 in maker-5-shared) ---
+
+# Each connection its own folder (mymaker5docs/prod/, mymaker5docs/stage/),
+# synced with its own cloud alone: nothing passes between stage and prod here.
+# The left bar switches between them.
+SYNC_SCOPE = "per-connection"
+
+# The two clouds, by their sites: linking one needs only this (the cloud
+# publishes its edge API at /.well-known/dlab5-edge.json). prod comes first.
+ENVIRONMENTS: Dict[str, str] = {
+    "prod": "https://maker5.cloud",
+    "stage": "https://stage.maker5.cloud",
+}
+
 # -- the chat (a local Claude Code with only this edge's MCP tools) -----------
 
 # What a proposal from the chat may run on this edge's own API: (method, path
@@ -60,7 +74,14 @@ CHAT_ALLOWED: List[Tuple[str, str]] = [
     ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/(blocks|modules|interfaces|proposals)"),
     ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/interfaces/i-[a-z0-9]{8}/connects"),
     ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/items/(b|m|i|pr)-[a-z0-9]{8}/rename"),
-    ("DELETE", r"/api/products/[a-z][a-z0-9-]{0,39}/items/(b|m|i|pr)-[a-z0-9]{8}"),
+    ("DELETE", r"/api/products/[a-z][a-z0-9-]{0,39}/items/(b|m|i|pr|w)-[a-z0-9]{8}"),
+    # a BOM into the model, and the hardware canvas (ADR-0014 in maker-5-shared)
+    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/import/bom/apply"),
+    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/canvas/(place|pins)"),
+    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/wires(/w-[a-z0-9]{8})?"),
+    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/items/(b|m)-[a-z0-9]{8}/article"),
+    # parts from the workspace's stock (ADR-0010 in maker-5-shared)
+    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/parts/(reserve|release|return)"),
     # history: name a revision, make a baseline, go back to one (as a new revision)
     ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/revisions/([0-9]{1,5}|latest)/(tag|restore)"),
     # never here: /proposals/<id>/decide, which a person does on the page (ADR-0006 in maker-5-shared)
@@ -97,6 +118,18 @@ diff() says what changed between two (numbers or tag names), tag_revision()
 names one, restore() goes back to one as a new revision. A frozen tag is a
 baseline, e.g. "Prototype A"; propose one only for a state the person calls a
 prototype or a release.
+
+Parts come from the {tenant}'s stock in the cloud, which its workspaces
+share: stock() searches it
+(articles with on hand, reserved, free), resolve_code() says what a scanned
+code is. link_article() says which article a block or module is built from
+and how many; bom() then lists what the product needs against what it took
+and what is free. reserve_parts(), release_parts() and return_parts() take
+parts for the product or give them back; each waits for Confirm, and the
+cloud refuses what is not free. A product here is the cloud workspace of
+the same name. Never invent an article id: take it from
+stock(). Adding articles, receiving stock and printing labels are done by a
+person on the cloud's Stock page.
 
 Privacy: what this edge keeps private never reaches you. Names you see are
 the {tenant}'s; use them only to answer.""".format(

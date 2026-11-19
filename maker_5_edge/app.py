@@ -25,6 +25,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import time
 from pathlib import Path
 
 from flask import abort, jsonify, render_template, request
@@ -106,17 +107,40 @@ def _cloud_site() -> str:
     return str(cloud.load_state(name).get("site") or (getattr(edge_settings, "ENVIRONMENTS", {}) or {}).get(name) or "")
 
 
+# How often the page's list asks the cloud for its workspaces again, so a
+# rename or a new workspace there shows here without a restart.
+TENANT_FRESH_S = 30
+_tenant_seen: dict = {}
+
+
+def cloud_title(space: dict) -> str:
+    """A workspace's name as the cloud shows it: the shared one, while it keeps
+    its default name, is "Shared" (the cloud translates it)."""
+    name = space.get("name") or ""
+    return "Shared" if space.get("kind") == "shared" and name in ("Everyone", "Shared") else name
+
+
 def workspaces() -> list:
     """The products here, as the cloud's workspaces: each workspace of the
-    current connection gets its folder (adopt), and a product whose workspace
-    was removed in the cloud is marked gone (its files stay)."""
+    current connection gets its folder (adopt), its title is the cloud's name
+    (a label: the folder and every id stay), and a product whose workspace was
+    removed in the cloud is marked gone (its files stay)."""
     pp = products()
     gone = set()
-    if cloud.per_connection() and cloud.active_profile() in cloud.linked_profiles():
+    name = cloud.active_profile()
+    if cloud.per_connection() and name in cloud.linked_profiles():
         try:
+            if time.time() - _tenant_seen.get(name, 0) > TENANT_FRESH_S:
+                cloud.tenant(name, refresh=True)
+                _tenant_seen[name] = time.time()
             listed = edge_sync.listing(pp.kb)
             pp.adopt(listed)
             gone = {s["graph"] for s in listed if s["gone"]}
+            titles = {p["product"]: p["title"] for p in pp.products()}
+            for s in listed:
+                want = cloud_title(s)
+                if not s["gone"] and want and s["graph"] in titles and titles[s["graph"]] != want:
+                    pp.set_product(s["graph"], title=want)
         except cloud.CloudError:
             pass
     return [{**p, "gone": p["product"] in gone} for p in pp.products()]
@@ -185,7 +209,11 @@ def model(p: str):
 
 @app.post("/api/products/<p>")
 def set_product(p: str):
-    return run(products().set_product, p, **fields("title", "status"))
+    b = fields("title", "status")
+    if cloud.per_connection() and "title" in b:
+        return jsonify({"errors": ["a workspace is renamed in the cloud; its new name shows here by itself"],
+                        "site": _cloud_site()}), 409
+    return run(products().set_product, p, **b)
 
 
 @app.post("/api/products/<p>/blocks")

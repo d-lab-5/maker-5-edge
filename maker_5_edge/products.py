@@ -255,7 +255,7 @@ class Products:
             if s.get("gone") or not g or not kn.GRAPH_NAME.fullmatch(g) or g in RESERVED or self.kb._path(g).exists():
                 continue
             node = _iri("product", g)
-            title = s.get("name") or g
+            title = s.get("title") or s.get("name") or g
 
             def apply(gr: Graph, node: URIRef = node, title: str = title) -> None:
                 if self._product_node(gr) is None:

@@ -30,6 +30,31 @@ function busyOn() {
 function busyOff() {
   if (busyN > 0 && --busyN === 0) { clearTimeout(busyT); $("#busy").hidden = true; }
 }
+// edge.js (linking, switching) shows the same card through core.busy
+window.core = window.core || {};
+if (!window.core.busy) window.core.busy = (d) => (d > 0 ? busyOn() : busyOff());
+
+/** The card while the edge works in the background (a sync, the first
+ *  start), then the page drawn again with what it brought. */
+let waitingJobs = false;
+async function whileJobs() {
+  if (waitingJobs) return;
+  waitingJobs = true;
+  let shown = false;
+  try {
+    for (let i = 0; i < 400; i++) {
+      const jobs = await core.api("GET", "/api/jobs").catch(() => []);
+      const on = (Array.isArray(jobs) ? jobs : jobs.jobs || []).some((j) => j.state === "queued" || j.state === "running");
+      if (!on) break;
+      if (!shown) { busyOn(); shown = true; }
+      await new Promise((r) => setTimeout(r, 700));
+    }
+  } finally {
+    if (shown) { busyOff(); S.seen = {}; refresh(); }
+    waitingJobs = false;
+  }
+}
+
 async function busy(work) {
   busyOn();
   try { return await (typeof work === "function" ? work() : work); } finally { busyOff(); }
@@ -140,7 +165,7 @@ async function drawModel() {
       <button class="primary">${esc(t("model.addIt"))}</button> <button type="button" class="cancel">${esc(t("model.cancel"))}</button></form>`;
   box.innerHTML = `
     <div class="ws-head"><h2>${esc(m.product.title)}</h2>
-      <button class="ws-rename" data-help="help.renameProduct">${esc(t("model.renameProduct"))}</button>
+      ${S.fromCloud ? "" : `<button class="ws-rename" data-help="help.renameProduct">${esc(t("model.renameProduct"))}</button>`}
       <a class="btn" download href="${P()}/export.ttl" data-help="help.export">${esc(t("model.export"))}</a></div>
     <p class="sub">${esc(t("model.sub", { n: m.triples }))}</p>
     <div class="cols">
@@ -155,7 +180,7 @@ async function drawModel() {
         ${ends.length >= 2 ? addForm("interface") : `<p class="note">${esc(t("model.needTwo"))}</p>`}</section>
     </div>
     ${drawParts()}`;
-  box.querySelector(".ws-rename").onclick = (e) => renameForm(e.target.closest(".ws-head"), m.product.title);
+  if (box.querySelector(".ws-rename")) box.querySelector(".ws-rename").onclick = (e) => renameForm(e.target.closest(".ws-head"), m.product.title);
   box.querySelectorAll("button.add").forEach((b) => b.onclick = () => { S.adding = b.dataset.add; S.seen.model = null; drawModel(); });
   box.querySelectorAll("form.add-form").forEach((f) => {
     f.name.focus();
@@ -515,20 +540,23 @@ function wire() {
     try {
       await core.api("POST", "/api/knowledge/sync", { all: true });
       core.toast(t("side.refreshing"));
-      setTimeout(() => { S.seen = {}; refresh(); }, 2500);
+      await whileJobs();
     } catch (err) { core.toast(failed(err), true); }
   };
   const cloudLink = async () => {
     try {
       const st = await core.api("GET", "/api/cloud");
       const env = (st.environments || []).find((e) => e.current);
+      // a workspace's name is the cloud's: renamed there, not here
+      if (S.fromCloud !== Boolean(st.per_connection)) { S.fromCloud = Boolean(st.per_connection); S.seen = {}; refresh(); }
       const a = $("#ws-cloud");
       a.hidden = !(env && env.site);
       if (env && env.site) a.href = env.site.replace(/\/$/, "") + "/settings/";
     } catch { /* the link stays hidden */ }
   };
   cloudLink();
-  window.addEventListener("edge:switched", () => { select(null); S.seen = {}; cloudLink(); refresh(); });
+  whileJobs();                                   // a sync started with the edge
+  window.addEventListener("edge:switched", () => { select(null); S.seen = {}; cloudLink(); refresh(); setTimeout(whileJobs, 300); });
   wireHelp();
   wireSide();
   wireChatAttach();

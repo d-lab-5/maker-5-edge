@@ -62,7 +62,9 @@
   <section id="edge-chat" class="panel"></section>
 </main>
 <div id="help-tip" class="help-tip" role="tooltip" hidden></div>
-<div id="busy" class="busy" hidden role="status" aria-live="polite"><div class="busy__spin"></div><span data-i18n="busy">loading…</span></div>
+<div id="busy" class="busy" hidden role="status" aria-live="polite">  <!-- the cloud's loading card -->
+  <div class="busy__card"><span class="busy__glass" aria-hidden="true"></span><span class="busy__word" data-i18n="busy">loading…</span><i class="busy__bar" aria-hidden="true"></i></div>
+</div>
 {% endblock %}
 
 {% block scripts %}

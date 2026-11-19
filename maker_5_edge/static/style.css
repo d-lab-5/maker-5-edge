@@ -151,14 +151,22 @@ table.history td.acts { white-space: nowrap; text-align: right; }
 button.restore.sure { border-color: var(--danger); color: var(--danger); }
 
 /* the loading indicator: the middle of the screen, over everything */
-.busy { position: fixed; inset: 0; z-index: 1000; display: flex; flex-direction: column; gap: 10px; align-items: center;
-        justify-content: center; background: color-mix(in srgb, var(--bg) 45%, transparent); pointer-events: all; }
+/* the loading card, as the cloud shows it (Feedback.tsx's mk-busy): the middle
+   of the screen, after a moment; clicks pass through */
+.busy { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; pointer-events: none; }
 .busy[hidden] { display: none; }
-.busy__spin { width: 42px; height: 42px; border-radius: 50%; border: 4px solid var(--edge); border-top-color: var(--accent);
-              animation: busy-spin 0.8s linear infinite; }
-.busy span { font-size: 13px; color: var(--muted); background: var(--panel); padding: 2px 10px; border-radius: 999px; }
-@keyframes busy-spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .busy__spin { animation-duration: 2.4s; } }
+.busy__card { display: grid; grid-template-columns: auto auto; align-items: center; gap: 8px 16px; min-width: 12rem;
+              padding: 16px 24px; border: 1px solid var(--accent); border-radius: var(--radius);
+              background: var(--paper); color: var(--ink); box-shadow: 0 10px 30px rgb(0 0 0 / .18); }
+.busy__glass { width: 1.4em; height: 1.4em; background: var(--muted);
+               clip-path: polygon(0 0, 100% 0, 55% 50%, 100% 100%, 0 100%, 45% 50%);
+               animation: busy-flip 1.2s ease-in-out infinite; }
+.busy__bar { grid-column: 1 / -1; display: block; height: 3px; border-radius: 3px;
+             background: linear-gradient(90deg, transparent, var(--accent), transparent) no-repeat; background-size: 40% 100%;
+             animation: busy-run 1.1s linear infinite; }
+@keyframes busy-flip { 0%, 70% { transform: rotate(0deg); } 100% { transform: rotate(180deg); } }
+@keyframes busy-run { from { background-position: -40% 0; } to { background-position: 140% 0; } }
+@media (prefers-reduced-motion: reduce) { .busy__glass { animation: none; } .busy__bar { animation: none; background: var(--accent); } }
 
 /* the left rail hides and comes back (the ☰ in the header) */
 .side-btn { min-width: 34px; font-size: 16px; line-height: 1; }

@@ -50,3 +50,20 @@ def test_an_old_mydocs_becomes_prods(tmp_path):
     empty.mkdir(parents=True)
     web._move_old_folder(empty, tmp_path / "x" / "mymaker5docs")
     assert not empty.exists() and not (tmp_path / "x" / "mymaker5docs").exists()
+
+
+def test_a_rename_in_the_cloud_is_only_a_label_here(env, monkeypatch):
+    monkeypatch.setattr(web, "_tenant_seen", {})
+    client = web.app.test_client()
+    titles = {p["product"]: p["title"] for p in client.get("/api/products").get_json()}
+    assert titles["shared"] == "Shared", "the shared workspace, as the cloud shows it"
+    SPACES[1]["name"] = "Door bell"
+    try:
+        monkeypatch.setattr(web, "_tenant_seen", {})
+        titles = {p["product"]: p["title"] for p in client.get("/api/products").get_json()}
+        assert titles["shared"] == "Door bell", "the same folder, the cloud's new name"
+        assert (env / "prod" / "shared" / pr.MODEL).is_file()
+        r = client.post("/api/products/shared", json={"title": "Bell"})
+        assert r.status_code == 409, "renamed in the cloud, not here"
+    finally:
+        SPACES[1]["name"] = "Shared"

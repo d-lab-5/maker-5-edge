@@ -122,8 +122,9 @@ def new_product(title: str) -> dict:
 
 @server.tool()
 def set_product(product: str, title: str = "", status: str = "") -> dict:
-    """Rename a product (its id and folder stay) or set its status: active,
-    done or archived."""
+    """Set a product's status: active, done or archived. Its name is the
+    cloud workspace's and changes there (a rename here is refused); its id
+    and folder never change."""
     return act(f"Update product {product}", "POST", _p(product), _clean(title=title, status=status))
 
 

@@ -217,8 +217,9 @@ def box(box: str) -> dict:
 @server.tool()
 def resolve_code(code: str) -> dict:
     """What a code points at: one of our labels (HTTPS://MAKER5.CLOUD/T/…),
-    an EAN/GTIN, a manufacturer's QR text, nfc:<uid>. Returns its status
-    (article, unit, box, blank, unknown) and the id."""
+    an EAN/GTIN, a GS1 DataMatrix (GTIN and serial), a manufacturer's QR
+    text, a serial number, nfc:<uid>. Returns its status (article, unit, box,
+    blank, unknown) and the id; a product's barcode names the article."""
     return _get("/api/codes/resolve?" + urllib.parse.urlencode({"code": code}))
 
 

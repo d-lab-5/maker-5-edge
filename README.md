@@ -44,9 +44,14 @@ sends nothing about you, is cached for six hours, and is skipped silently when
 there is no network. `--no-update-check` turns it off. **Restart** and **Stop**
 are only accepted from this machine.
 
-Notes live in two folders: `mydocs/` for your own, which git
-ignores and which follows the working directory, and the samples that ship
-inside the package. A save goes back to the folder the note came from.
+Your work lives in `mymaker5docs/`, which git ignores and which follows the
+working directory: a folder per cloud, `mymaker5docs/prod/` and
+`mymaker5docs/stage/`, each synced with its own cloud alone (ADR-0013 in
+maker-5-shared). The left bar switches between them; one not linked yet
+offers to link it, with only the cloud's site (maker5.cloud, or
+stage.maker5.cloud). Workspaces are made in the cloud and appear here, each
+with its own folder. An older `mydocs/` becomes `mymaker5docs/prod/` on the
+first start.
 
 ## Installing without a clone
 

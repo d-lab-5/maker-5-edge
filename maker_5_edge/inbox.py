@@ -52,7 +52,7 @@ class NotFound(LookupError):
 
 
 def _root() -> Path:
-    d = kn.data_dir() / "inbox"
+    d = kn.scope_dir() / "inbox"
     d.mkdir(parents=True, exist_ok=True, mode=0o700)
     return d
 
@@ -62,20 +62,20 @@ def _open_product() -> str:
     from .products import MODEL, RESERVED
     p = sel.get().get("product", "")
     if p and p not in RESERVED and "/" not in p and not p.startswith(".") \
-            and (kn.data_dir() / p / MODEL).is_file():
+            and (kn.scope_dir() / p / MODEL).is_file():
         return p
     return ""
 
 
 def _product_root(product: str) -> Path:
-    d = kn.data_dir() / product / "files"
+    d = kn.scope_dir() / product / "files"
     d.mkdir(exist_ok=True, mode=0o700)
     return d
 
 
 def _roots() -> List[Path]:
     """Where files are looked for: the shared inbox, then every product's files."""
-    return [_root()] + sorted(kn.data_dir().glob("*/files"))
+    return [_root()] + sorted(kn.scope_dir().glob("*/files"))
 
 
 def _dir(fid: str) -> Path:
@@ -261,7 +261,7 @@ def add(name: str, data: bytes) -> Dict:
 def files() -> List[Dict]:
     """The open product's files and the shared inbox's."""
     product = _open_product()
-    roots = [_root()] + ([kn.data_dir() / product / "files"] if product else [])
+    roots = [_root()] + ([kn.scope_dir() / product / "files"] if product else [])
     out = []
     for root in roots:
         for d in root.iterdir() if root.is_dir() else []:

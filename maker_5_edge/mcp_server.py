@@ -114,8 +114,9 @@ def read_file(file: str, offset: int = 0, limit: int = 20000) -> dict:
 
 @server.tool()
 def new_product(title: str) -> dict:
-    """Start a product. Its id is minted (p-xxxxxxxx) and never changes; the
-    title can."""
+    """Start a product on an edge without a cloud of its own. On this edge
+    workspaces are made in the cloud by an admin and appear here by
+    themselves (refused here: say so, and point to the cloud's Settings)."""
     return act(f"New product “{title}”", "POST", "/api/products", {"title": title})
 
 

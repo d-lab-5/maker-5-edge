@@ -8,6 +8,11 @@ files given to the chat (inbox.py).
 
     maker-5-edge-web                       # http://127.0.0.1:8773
     maker-5-edge-web --port 9000
+    maker-5-edge-web --dir ~/maker5        # where mymaker5docs/ would be
+
+Each cloud connection has its own folder (ADR-0013 in maker-5-shared):
+mymaker5docs/prod/ and mymaker5docs/stage/, switched in the left bar. The
+workspaces are the cloud's; each gets its folder here when it is listed.
     python3 -m maker_5_edge.app            # the same, from a checkout
 
 The page, stop, restart, update and the About box come from core.server; the
@@ -18,7 +23,9 @@ Products, so the Maker-5 shapes refuse a broken model (422).
 from __future__ import annotations
 
 import argparse
+import os
 import sys
+from pathlib import Path
 
 from flask import abort, jsonify, render_template, request
 
@@ -31,6 +38,8 @@ from .core import server
 from .core import workspace as ws
 from .edge import cloud
 from .edge import knowledge as kn
+from .edge import settings as edge_settings
+from .edge import sync as edge_sync
 
 app = server.create_app(__name__)
 
@@ -78,6 +87,41 @@ def products() -> pr.Products:
     return _products
 
 
+def _switched() -> None:
+    """Another connection is current: its own folder, nothing open from the last one."""
+    global _products
+    _products = None
+    sel.set()
+    try:
+        pr.migrate_layout()
+    except OSError:
+        pass
+
+
+edge_routes.ON_SWITCH.append(_switched)
+
+
+def _cloud_site() -> str:
+    name = cloud.active_profile()
+    return str(cloud.load_state(name).get("site") or (getattr(edge_settings, "ENVIRONMENTS", {}) or {}).get(name) or "")
+
+
+def workspaces() -> list:
+    """The products here, as the cloud's workspaces: each workspace of the
+    current connection gets its folder (adopt), and a product whose workspace
+    was removed in the cloud is marked gone (its files stay)."""
+    pp = products()
+    gone = set()
+    if cloud.per_connection() and cloud.active_profile() in cloud.linked_profiles():
+        try:
+            listed = edge_sync.listing(pp.kb)
+            pp.adopt(listed)
+            gone = {s["graph"] for s in listed if s["gone"]}
+        except cloud.CloudError:
+            pass
+    return [{**p, "gone": p["product"] in gone} for p in pp.products()]
+
+
 def run(fn, *args, **kwargs):
     try:
         return jsonify(fn(*args, **kwargs))
@@ -122,11 +166,15 @@ def set_selection():
 
 @app.get("/api/products")
 def list_products():
-    return run(products().products)
+    return run(workspaces)
 
 
 @app.post("/api/products")
 def new_product():
+    if cloud.per_connection():
+        site = _cloud_site()
+        return jsonify({"errors": [f"a workspace is made in the cloud ({site or 'its Settings'}), by an admin "
+                                   "of the organisation; it then appears here"], "site": site}), 409
     return run(products().new_product, **fields("title"))
 
 
@@ -314,14 +362,37 @@ def inbox_remove(fid: str):
 
 # ------------------------------------------------------------------ main ----
 
+DATA_DIR = "mymaker5docs"
+
+
+def _move_old_folder(old: Path, new: Path) -> None:
+    """The products of an edge from before connections had their own folders
+    (./mydocs/<product>/) are prod's now: ./mymaker5docs/prod/. Never
+    overwrites; an empty old folder is just removed."""
+    if not old.is_dir() or old.resolve() == new.resolve():
+        return
+    if not any(old.iterdir()):
+        old.rmdir()
+        return
+    target = new / "prod"
+    if target.exists():
+        print(f"  {old}/ kept: {target}/ exists already, move what you need by hand", flush=True)
+        return
+    new.mkdir(parents=True, exist_ok=True)
+    os.replace(old, target)
+    print(f"  moved {old}/ to {target}/ (prod's folder)", flush=True)
+
+
 def main(argv: list | None = None) -> int:
     ap = argparse.ArgumentParser(prog="maker-5-edge-web",
                                  description=__doc__.strip().splitlines()[0])
     server.add_server_args(ap)
-    ap.add_argument("--dir", default=ws.FOLDERS[ws.USER].name,
-                    help="where products and their files live (default: ./mydocs)")
+    ap.add_argument("--dir", default=DATA_DIR,
+                    help=f"where products and their files live, a folder per connection (default: ./{DATA_DIR})")
     args = ap.parse_args(sys.argv[1:] if argv is None else argv)
 
+    if args.dir == DATA_DIR:
+        _move_old_folder(Path(ws.FOLDERS[ws.USER].name), Path(DATA_DIR))
     ws.configure(user_dir=args.dir)
     # One folder per product (ADR-0003 in maker-5-shared): the edge layer's routes and first
     # start build kn.KnowledgeBase() when called, so binding it here gives

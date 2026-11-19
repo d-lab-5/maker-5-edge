@@ -34,6 +34,8 @@ def fake(monkeypatch):
         if path == "materials/list":
             return {"articles": [{"id": PI, "name": "Raspberry Pi 1 B", "tracking": "serial", "unit": "pcs", "free": 2},
                                  {"id": SD, "name": "microSD 16 GB", "tracking": "bulk", "unit": "pcs", "free": 10}]}
+        if path == "tenant":
+            return {"tenant": {"id": "t-x", "name": "Example"}, "spaces": [{"id": "s-aaaaaaaaaa", "name": "Weather box"}]}
         if path == "materials/boxes":
             return {"boxes": [{"id": BOX, "name": "Doorbell prototype", "kind": "box", "spaceId": body.get("spaceId") or None}]}
         if path == "materials/resolve":

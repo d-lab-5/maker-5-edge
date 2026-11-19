@@ -45,6 +45,20 @@ PER_LANGUAGE: List[str] = [
     "http://www.w3.org/2004/02/skos/core#prefLabel",
 ]
 
+# -- connections: prod and stage, each its own (ADR-0013 in maker-5-shared) ---
+
+# Each connection its own folder (mymaker5docs/prod/, mymaker5docs/stage/),
+# synced with its own cloud alone: nothing passes between stage and prod here.
+# The left bar switches between them.
+SYNC_SCOPE = "per-connection"
+
+# The two clouds, by their sites: linking one needs only this (the cloud
+# publishes its edge API at /.well-known/dlab5-edge.json). prod comes first.
+ENVIRONMENTS: Dict[str, str] = {
+    "prod": "https://maker5.cloud",
+    "stage": "https://stage.maker5.cloud",
+}
+
 # -- the chat (a local Claude Code with only this edge's MCP tools) -----------
 
 # What a proposal from the chat may run on this edge's own API: (method, path

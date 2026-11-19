@@ -10,8 +10,8 @@ edge API and takes parts for a product, as the organisation's edge; it never
 edits the catalogue, receives stock or prints codes (a person does that on
 the site).
 
-A product here is matched to its space in the cloud by NAME, as the A-Box
-sync does (edge/cloud.py space_slug): ids differ between clouds.
+A product here is its workspace in the cloud: found by the id the sync keeps
+for it (edge/sync.py), else by NAME (edge/cloud.py space_slug).
 
     stock(q)                 the catalogue, filtered
     bom(products, p)         what the model needs (m5:usesArticle × quantity)
@@ -30,6 +30,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from .edge import cloud
+from .edge import sync as edge_sync
 
 STEPS = ("reserve", "release", "return")
 
@@ -82,6 +83,17 @@ def space_of(title: str, profile: Optional[str] = None) -> Dict[str, Any]:
     return space
 
 
+def product_space(products: Any, p: str, profile: Optional[str] = None) -> Dict[str, Any]:
+    """The cloud workspace a product here is: by the id the sync keeps, else by its title."""
+    try:
+        space, _ = edge_sync.space_of(products.kb, p, profile)
+        if space:
+            return space
+    except (cloud.CloudError, AttributeError):
+        pass
+    return space_of(products.model(p)["product"]["title"], profile)
+
+
 def bom(products: Any, p: str, profile: Optional[str] = None) -> Dict[str, Any]:
     """The product's parts list: each article its blocks and modules are built
     from, how many the model needs, what the product took, and what is free."""
@@ -96,7 +108,7 @@ def bom(products: Any, p: str, profile: Optional[str] = None) -> Dict[str, Any]:
     if not need:
         return out
     try:
-        space = space_of(m["product"]["title"], profile)
+        space = product_space(products, p, profile)
         out["space"] = {"id": space["id"], "name": space.get("name")}
         catalogue = {a["id"]: a for a in stock(profile=profile)}
         took = {x["articleId"]: x for x in cloud.call("materials/product", {"spaceId": space["id"]}, profile).get("lines", [])}
@@ -125,7 +137,7 @@ def take(products: Any, p: str, step: str, article_id: str, qty: Optional[int] =
     is not free, or not taken)."""
     if step not in STEPS:
         raise ValueError(f"a step is one of {', '.join(STEPS)}")
-    space = space_of(products.model(p)["product"]["title"], profile)
+    space = product_space(products, p, profile)
     body: Dict[str, Any] = {"spaceId": space["id"], "articleId": article_id, "note": note}
     if unit_id:
         body["unitId"] = unit_id

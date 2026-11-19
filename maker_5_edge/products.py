@@ -9,12 +9,15 @@ interfaces between them, and the proposals made to change it. Everything is
 written through edge.knowledge's change(), so the Maker-5 SHACL shapes
 (edge/ontology/shapes) refuse a model that breaks them, and nothing is saved.
 
-Each product has its own folder under the data dir (ADR-0003 in
-maker-5-shared):
+Each product has its own folder under its connection's folder (ADR-0003 and
+ADR-0013 in maker-5-shared; <env> is prod or stage):
 
-    <data>/<product>/model.ttl        its A-Box
-    <data>/<product>/revisions/       every saved state (revisions.py, ADR-0004)
-    <data>/<product>/files/<id>/      files given to the chat while it is open (inbox.py)
+    <data>/<env>/<product>/model.ttl  its A-Box
+    <data>/<env>/<product>/revisions/ every saved state (revisions.py, ADR-0004)
+    <data>/<env>/<product>/files/<id>/ files given to the chat while it is open (inbox.py)
+
+A product is a workspace of the cloud: it is made there, and adopt() gives
+each workspace of the current connection its folder here.
 
 ProductKB is the edge layer's KnowledgeBase with that layout, so the cloud
 sync (edge/sync.py) works on it unchanged; migrate_layout() moves the
@@ -80,8 +83,8 @@ class ProductKB(kn.KnowledgeBase):
     <data>/<name>/model.ttl. Everything else (validation on change, one
     writer at a time, the sync bases in <data>/.sync/) is the edge layer's."""
 
-    def __init__(self, directory: Optional[Path] = None):
-        super().__init__(Path(directory) if directory else kn.data_dir())
+    def __init__(self, directory: Optional[Path] = None, profile: Optional[str] = None):
+        super().__init__(Path(directory) if directory else kn.scope_dir(profile))
 
     def _path(self, name: str) -> Path:
         if not kn.GRAPH_NAME.fullmatch(name or "") or name in RESERVED:
@@ -116,7 +119,7 @@ class ProductKB(kn.KnowledgeBase):
 def migrate_layout(root: Optional[Path] = None) -> List[str]:
     """Move <root>/abox/<name>.ttl to <root>/<name>/model.ttl and the sync
     bases <root>/abox/.sync/ to <root>/.sync/. Idempotent; never overwrites."""
-    root = Path(root) if root else kn.data_dir()
+    root = Path(root) if root else kn.scope_dir()
     old = root / "abox"
     done: List[str] = []
     if not old.is_dir():
@@ -241,6 +244,26 @@ class Products:
                 "open_proposals": len(proposed),
             })
         return sorted(out, key=lambda p: p["title"].lower())
+
+    def adopt(self, spaces: List[Dict[str, Any]]) -> List[str]:
+        """Give each workspace of the cloud (edge.sync.listing) its folder here,
+        with its m5:Product named as the workspace, until the sync brings what
+        the cloud holds. Returns the products it made."""
+        made = []
+        for s in spaces:
+            g = s.get("graph")
+            if s.get("gone") or not g or not kn.GRAPH_NAME.fullmatch(g) or g in RESERVED or self.kb._path(g).exists():
+                continue
+            node = _iri("product", g)
+            title = s.get("name") or g
+
+            def apply(gr: Graph, node: URIRef = node, title: str = title) -> None:
+                if self._product_node(gr) is None:
+                    gr.add((node, RDF.type, M5.Product))
+                    gr.add((node, SCHEMA.name, Literal(title)))
+            self.kb.change(g, apply)
+            made.append(g)
+        return made
 
     def new_product(self, title: str) -> Dict:
         """A product with a minted id (p-xxxxxxxx) that never changes; its title can."""

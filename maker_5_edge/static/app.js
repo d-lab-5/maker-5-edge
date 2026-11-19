@@ -74,8 +74,8 @@ async function drawList() {
     return;
   }
   box.innerHTML = list.map((p) =>
-    `<button data-ws="${esc(p.product)}" class="${p.product === S.ws ? "is-on" : ""}">
-       <span>${esc(p.title)}</span>
+    `<button data-ws="${esc(p.product)}" class="${p.product === S.ws ? "is-on" : ""}${p.gone ? " is-gone" : ""}"${p.gone ? ` title="${esc(t("list.goneTitle"))}"` : ""}>
+       <span>${esc(p.title)}${p.gone ? ` <small class="gone">${esc(t("list.gone"))}</small>` : ""}</span>
        <small>${esc(t("list.counts", { b: p.blocks, m: p.modules }))}${p.open_proposals ? ` · ${esc(t("list.open", { n: p.open_proposals }))}` : ""}</small>
      </button>`).join("");
   box.querySelectorAll("button[data-ws]").forEach((b) => b.onclick = () => select(b.dataset.ws));
@@ -509,15 +509,26 @@ function wire() {
     S.seen = {};
     busy(refresh);
   });
-  $("#np-make").onclick = async () => {
+  // Workspaces are made in the cloud (ADR-0013): refresh pulls its list into
+  // this environment's folder; switching environment (edge.js) starts afresh.
+  $("#ws-refresh").onclick = async () => {
     try {
-      const got = await core.api("POST", "/api/products", { title: $("#np-title").value });
-      $("#np-title").value = "";
-      $(".new-ws").open = false;
-      select(got.product);
+      await core.api("POST", "/api/knowledge/sync", { all: true });
+      core.toast(t("side.refreshing"));
+      setTimeout(() => { S.seen = {}; refresh(); }, 2500);
     } catch (err) { core.toast(failed(err), true); }
   };
-  $("#np-title").onkeydown = (e) => { if (e.key === "Enter") $("#np-make").click(); };
+  const cloudLink = async () => {
+    try {
+      const st = await core.api("GET", "/api/cloud");
+      const env = (st.environments || []).find((e) => e.current);
+      const a = $("#ws-cloud");
+      a.hidden = !(env && env.site);
+      if (env && env.site) a.href = env.site.replace(/\/$/, "") + "/settings/";
+    } catch { /* the link stays hidden */ }
+  };
+  cloudLink();
+  window.addEventListener("edge:switched", () => { select(null); S.seen = {}; cloudLink(); refresh(); });
   wireHelp();
   wireSide();
   wireChatAttach();

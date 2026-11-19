@@ -44,6 +44,16 @@ sends nothing about you, is cached for six hours, and is skipped silently when
 there is no network. `--no-update-check` turns it off. **Restart** and **Stop**
 are only accepted from this machine.
 
+**Import BOM** on a workspace reads a bill of materials written in Markdown
+(`## Hardware` / `## Software`, `###` groups, a table in each) into its model:
+blocks with their supply (there, in hand, to buy), software modules with
+their versions, and, after a preview, the articles the stock lacks, proposed
+in the cloud for an admin to accept on Materials. The **Hardware** tab is the
+canvas: place the blocks, which get the pins of their part
+(`maker_5_edge/parts/library.json`), and click two pins to wire them. Pins,
+wires and positions are in the model, so they sync and the chat can read and
+propose them (ADR-0014 in maker-5-shared).
+
 Your work lives in `mymaker5docs/`, which git ignores and which follows the
 working directory: a folder per cloud, `mymaker5docs/prod/` and
 `mymaker5docs/stage/`, each synced with its own cloud alone (ADR-0013 in

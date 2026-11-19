@@ -45,7 +45,8 @@ server = MCPServer(
         "person drops for you are in inbox(); read them with read_file(). "
         "Parts: stock(), resolve_code(), link_article(), bom(), "
         "reserve_parts(), release_parts(), return_parts(). Boxes (read "
-        "only): boxes(), box()."
+        "only): boxes(), box(). A BOM in Markdown: import_bom(). Hardware "
+        "wiring: canvas(), wire(), set_pins(); remove a wire with remove()."
     ),)
 
 web.add_core_tools(server)
@@ -231,6 +232,47 @@ def link_article(product: str, item: str, article: str, quantity: int = 1) -> di
     how many one product needs. An empty article removes the link."""
     return act(f"Build {item} from {article or 'nothing'}" + (f" × {quantity}" if article and quantity != 1 else ""),
                "POST", _p(product) + f"/items/{_q(item)}/article", {"article": article, "quantity": int(quantity or 1)})
+
+
+@server.tool()
+def import_bom(product: str, file: str = "", text: str = "") -> dict:
+    """Import a bill of materials written as Markdown (## Hardware / ##
+    Software, ### groups, a table in each) into a product: a file the person
+    gave you (its inbox id) or the text. Shows what it would make, then asks
+    the person to confirm: blocks with their supply (there, in hand, to buy),
+    software modules with versions, and the articles the stock lacks, which
+    are proposed in the cloud for an admin to accept."""
+    web.ensure_server()
+    pv = web.call("POST", _p(product) + "/import/bom", {"inbox": file} if file else {"text": text})
+    if not isinstance(pv, dict) or "blocks" not in pv:
+        return pv
+    n = len(pv["blocks"]) + len(pv["modules"])
+    new = sum(1 for b in pv["blocks"] + pv["tools"] if b.get("propose") and b.get("include_article", True))
+    return act(f"Import the BOM: {len(pv['blocks'])} blocks, {len(pv['modules'])} modules"
+               + (f", propose {new} articles" if new else "") + (f"; skip {len(pv['skipped'])} already there" if pv["skipped"] else ""),
+               "POST", _p(product) + "/import/bom/apply", {"preview": pv}) if n or new else {"nothing": "every row is in the model already", **pv}
+
+
+@server.tool()
+def canvas(product: str) -> dict:
+    """The hardware canvas: each block's place and pins (ids <block>.<n>,
+    names like GPIO17, roles), and the wires between pins."""
+    return _get(_p(product) + "/canvas")
+
+
+@server.tool()
+def wire(product: str, pin_from: str, pin_to: str, color: str = "", interface: str = "") -> dict:
+    """Propose a wire between two pins (ids from canvas()), in a colour,
+    optionally as part of an interface. The person confirms it."""
+    return act(f"Wire {pin_from} → {pin_to}" + (f" ({color})" if color else ""), "POST", _p(product) + "/wires",
+               {"from": pin_from, "to": pin_to, "color": color, "interface": interface})
+
+
+@server.tool()
+def set_pins(product: str, block: str, pins: List[Dict]) -> dict:
+    """Propose a block's pins: [{n, name, role}] with role power, ground,
+    signal, audio, video or data. A wired pin cannot be dropped."""
+    return act(f"Set {len(pins)} pins on {block}", "POST", _p(product) + "/canvas/pins", {"block": block, "pins": pins})
 
 
 @server.tool()

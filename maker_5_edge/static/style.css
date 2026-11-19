@@ -221,3 +221,49 @@ body.side-hidden .layout > .work, body.side-hidden .layout > #edge-connections {
 .ws-list button.is-gone span { opacity: .6; }
 .ws-list .gone { color: var(--muted); font-style: italic; }
 #ws-refresh { align-self: flex-start; }
+
+/* ---- a BOM's supply, and the hardware canvas (ADR-0014) ---- */
+.pill.supply-there { opacity: .75; }
+.pill.supply-in-hand { color: var(--ok); border-color: var(--ok); }
+.pill.supply-to-buy { color: var(--warn); border-color: var(--warn); }
+.bom-preview { max-height: 60vh; overflow: auto; }
+.bom-preview table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.bom-preview td { padding: 3px 6px; border-bottom: 1px solid var(--edge); vertical-align: top; }
+.bom-preview h3 { margin: 10px 0 4px; font-size: 13px; }
+.core-dialog textarea { width: min(70vw, 640px); font-family: var(--mono); font-size: 12px; }
+.note.warn { color: var(--warn); }
+
+.hw-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+.hw-bar .hw-status { flex: 1 1 260px; }
+.hw { display: grid; grid-template-columns: 220px 1fr; gap: 10px; min-height: 0; }
+@media (max-width: 760px) { .hw { grid-template-columns: 1fr; } }
+.hw-side { background: var(--panel); border: 1px solid var(--edge); border-radius: var(--radius); padding: 8px 10px;
+           max-height: 70vh; overflow: auto; font-size: 13px; }
+.hw-side h3 { font-size: 12px; margin: 6px 0; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.hw-side ul { list-style: none; margin: 0; padding: 0; }
+.hw-side li { display: flex; justify-content: space-between; gap: 6px; align-items: center; padding: 3px 0; }
+.hw-side li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hw-stage { border: 1px solid var(--edge); border-radius: var(--radius); background: var(--paper); overflow: hidden; }
+.hw-svg { display: block; width: 100%; height: 70vh; touch-action: none; cursor: grab; user-select: none; }
+.hw-dot { fill: var(--edge); }
+.hw-part { cursor: move; }
+.hw-body { fill: var(--panel); stroke: var(--muted); stroke-width: 1.2; }
+.hw-part.to-buy .hw-body { stroke-dasharray: 5 4; stroke: var(--warn); }
+.hw-head { fill: var(--panel-2); }
+.hw-name { font: 600 12px var(--font); fill: var(--ink); }
+.hw-pin { cursor: crosshair; }
+.hw-pin circle { fill: var(--paper); stroke: var(--muted); stroke-width: 1.5; }
+.hw-pin:hover circle, .hw-pin.is-from circle { fill: var(--accent); stroke: var(--accent); }
+.hw-pin.role-power circle { stroke: var(--danger); }
+.hw-pin.role-ground circle { stroke: var(--ink); }
+.hw-pin.role-signal circle { stroke: var(--accent); }
+.hw-pin.role-audio circle, .hw-pin.role-video circle { stroke: var(--cyan); }
+.hw-pin.role-data circle { stroke: var(--ok); }
+.hw-pinname { font: 10px var(--mono); fill: var(--muted); pointer-events: none; }
+.hw-wire { fill: none; stroke-width: 2.5; stroke-linejoin: round; cursor: pointer; }
+.hw-wire[stroke="white"] { stroke: #f8fafc; filter: drop-shadow(0 0 1px #334155); }
+.hw-wire[stroke="black"] { stroke: #111827; }
+:root[data-theme="dark"] .hw-wire[stroke="black"] { stroke: #9ca3af; }
+.hw-wire-hit { fill: none; stroke: transparent; stroke-width: 12; cursor: pointer; }
+.hw-wire-hit:hover + .hw-wire { stroke-width: 4; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .hw-wire[stroke="black"] { stroke: #9ca3af; } }

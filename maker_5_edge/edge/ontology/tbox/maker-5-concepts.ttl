@@ -65,3 +65,38 @@ m5:CategoryConsumable a skos:Concept ; skos:inScheme m5:ArticleCategories ; skos
 
 m5:CategoryTool a skos:Concept ; skos:inScheme m5:ArticleCategories ; skos:topConceptOf m5:ArticleCategories ;
     skos:prefLabel "Tool"@en , "Werkzeug"@de , "Outil"@fr .
+
+m5:PinRoles a skos:ConceptScheme ;
+    skos:prefLabel "Roles of pins"@en , "Rollen von Pins"@de , "Rôles des broches"@fr ;
+    skos:hasTopConcept m5:PinPower , m5:PinGround , m5:PinSignal , m5:PinAudio , m5:PinVideo , m5:PinData .
+
+m5:PinPower a skos:Concept ; skos:inScheme m5:PinRoles ; skos:topConceptOf m5:PinRoles ;
+    skos:prefLabel "Power"@en , "Versorgung"@de , "Alimentation"@fr .
+
+m5:PinGround a skos:Concept ; skos:inScheme m5:PinRoles ; skos:topConceptOf m5:PinRoles ;
+    skos:prefLabel "Ground"@en , "Masse"@de , "Masse"@fr .
+
+m5:PinSignal a skos:Concept ; skos:inScheme m5:PinRoles ; skos:topConceptOf m5:PinRoles ;
+    skos:prefLabel "Signal"@en , "Signal"@de , "Signal"@fr .
+
+m5:PinAudio a skos:Concept ; skos:inScheme m5:PinRoles ; skos:topConceptOf m5:PinRoles ;
+    skos:prefLabel "Audio"@en , "Audio"@de , "Audio"@fr .
+
+m5:PinVideo a skos:Concept ; skos:inScheme m5:PinRoles ; skos:topConceptOf m5:PinRoles ;
+    skos:prefLabel "Video"@en , "Video"@de , "Vidéo"@fr .
+
+m5:PinData a skos:Concept ; skos:inScheme m5:PinRoles ; skos:topConceptOf m5:PinRoles ;
+    skos:prefLabel "Data"@en , "Daten"@de , "Données"@fr .
+
+m5:SupplyStates a skos:ConceptScheme ;
+    skos:prefLabel "Supply"@en , "Beschaffung"@de , "Approvisionnement"@fr ;
+    skos:hasTopConcept m5:SupplyThere , m5:SupplyInHand , m5:SupplyToBuy .
+
+m5:SupplyThere a skos:Concept ; skos:inScheme m5:SupplyStates ; skos:topConceptOf m5:SupplyStates ;
+    skos:prefLabel "Already there"@en , "Schon vorhanden"@de , "Déjà là"@fr .
+
+m5:SupplyInHand a skos:Concept ; skos:inScheme m5:SupplyStates ; skos:topConceptOf m5:SupplyStates ;
+    skos:prefLabel "In hand"@en , "Zur Hand"@de , "Sous la main"@fr .
+
+m5:SupplyToBuy a skos:Concept ; skos:inScheme m5:SupplyStates ; skos:topConceptOf m5:SupplyStates ;
+    skos:prefLabel "To buy or build"@en , "Zu kaufen oder bauen"@de , "À acheter ou construire"@fr .

@@ -30,8 +30,10 @@ from pathlib import Path
 
 from flask import abort, jsonify, render_template, request
 
+from . import bom_import
 from . import inbox as ib
 from . import materials as mt
+from . import parts
 from . import products as pr
 from . import revisions as rv
 from . import selection as sel
@@ -252,6 +254,68 @@ def link_article(p: str, item: str):
     return run(products().link_article, p, item, **fields("article", "quantity"))
 
 
+# ---- a BOM into the model, and the hardware canvas (ADR-0014)
+
+def _bom_text() -> str:
+    b = body()
+    if b.get("inbox"):
+        out, offset = [], 0
+        while True:
+            part = ib.read(str(b["inbox"]), offset)
+            out.append(part["text"])
+            offset += len(part["text"])
+            if not part["more"] or offset > 400_000:
+                return "".join(out)
+    return str(b.get("text") or "")
+
+
+@app.post("/api/products/<p>/import/bom")
+def bom_preview(p: str):
+    """What importing this BOM (text, or a file in the inbox) would make. Writes nothing."""
+    return run(lambda: bom_import.preview(products(), p, _bom_text()))
+
+
+@app.post("/api/products/<p>/import/bom/apply")
+def bom_apply(p: str):
+    """Make what a reviewed preview says: proposed articles in the cloud, then one revision."""
+    return run(bom_import.apply, products(), p, body().get("preview") or {})
+
+
+@app.get("/api/products/<p>/canvas")
+def canvas(p: str):
+    return run(products().canvas, p)
+
+
+@app.post("/api/products/<p>/canvas/place")
+def canvas_place(p: str):
+    b = body()
+
+    def placed():
+        pp = products()
+        block = str(b.get("block") or "")
+        name = next((x["name"] for x in pp.model(p)["blocks"] if x["id"] == block), "")
+        return pp.place(p, block, b.get("x", 0), b.get("y", 0), default_pins=parts.pins_for(name)["pins"])
+    return run(placed)
+
+
+@app.post("/api/products/<p>/canvas/pins")
+def canvas_pins(p: str):
+    b = body()
+    return run(products().set_pins, p, str(b.get("block") or ""), b.get("pins") or [])
+
+
+@app.post("/api/products/<p>/wires")
+def add_wire(p: str):
+    b = body()
+    return run(products().add_wire, p, str(b.get("from") or ""), str(b.get("to") or ""),
+               str(b.get("color") or ""), str(b.get("interface") or ""))
+
+
+@app.post("/api/products/<p>/wires/<wire>")
+def set_wire(p: str, wire: str):
+    return run(products().set_wire, p, wire, **fields("color", "interface"))
+
+
 # ---- parts: the workspace's stock in the cloud (materials.py)
 
 @app.get("/api/stock")
@@ -307,6 +371,16 @@ def decide(p: str, item: str):
     return run(products().decide, p, item, **fields("decision", "note"))
 
 
+def _file_name(p: str) -> str:
+    """A download's name: the workspace's title as a slug ("door-bell"), not
+    its folder, which keeps the name it was first given."""
+    try:
+        title = next((x["title"] for x in products().products() if x["product"] == p), "")
+    except Exception:  # noqa: BLE001 - a name is never worth a failed download
+        title = ""
+    return cloud.space_slug(title) if title else p
+
+
 @app.get("/api/products/<p>/export.ttl")
 def export(p: str):
     try:
@@ -314,7 +388,7 @@ def export(p: str):
     except pr.NotFound:
         abort(404)
     return app.response_class(ttl, mimetype="text/turtle",
-                              headers={"Content-Disposition": f'attachment; filename="{p}.ttl"'})
+                              headers={"Content-Disposition": f'attachment; filename="{_file_name(p)}.ttl"'})
 
 
 # ---- history: every saved state, tags and baselines, compare, restore
@@ -330,7 +404,8 @@ def revision(p: str, ref: str):
         ttl = products().revision(p, ref)
     except pr.NotFound:
         abort(404)
-    return app.response_class(ttl, mimetype="text/turtle")
+    return app.response_class(ttl, mimetype="text/turtle",
+                              headers={"Content-Disposition": f'inline; filename="{_file_name(p)}-r{ref}.ttl"'})
 
 
 @app.get("/api/products/<p>/diff")

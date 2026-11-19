@@ -166,20 +166,23 @@ async function drawModel() {
   box.innerHTML = `
     <div class="ws-head"><h2>${esc(m.product.title)}</h2>
       ${S.fromCloud ? "" : `<button class="ws-rename" data-help="help.renameProduct">${esc(t("model.renameProduct"))}</button>`}
+      <button class="ws-bom" data-help="help.bom">${esc(t("bom.import"))}</button>
       <a class="btn" download href="${P()}/export.ttl" data-help="help.export">${esc(t("model.export"))}</a></div>
     <p class="sub">${esc(t("model.sub", { n: m.triples }))}</p>
     <div class="cols">
       <section class="card"><header><h3>${esc(t("model.blocks"))}</h3><small>${m.blocks.length}</small></header>
-        <ul class="items">${m.blocks.map((b) => itemRow(b, b.kind ? `<span class="pill ${esc(b.kind)}">${esc(word("kind", b.kind))}</span>` : "", true)).join("")}</ul>
+        <ul class="items">${m.blocks.map((b) => itemRow(b, (b.kind ? `<span class="pill ${esc(b.kind)}">${esc(word("kind", b.kind))}</span>` : "")
+          + (b.supply ? ` <span class="pill supply-${esc(b.supply)}">${esc(t(`supply.${b.supply}`))}</span>` : ""), true)).join("")}</ul>
         ${addForm("block")}</section>
       <section class="card"><header><h3>${esc(t("model.modules"))}</h3><small>${m.modules.length}</small></header>
-        <ul class="items">${m.modules.map((x) => itemRow(x, "", true)).join("")}</ul>
+        <ul class="items">${m.modules.map((x) => itemRow(x, x.version ? `<small class="note">${esc(x.version)}</small>` : "", true)).join("")}</ul>
         ${addForm("module")}</section>
       <section class="card"><header><h3>${esc(t("model.interfaces"))}</h3><small>${m.interfaces.length}</small></header>
         <ul class="items">${m.interfaces.map((i) => itemRow(i, `<br><small>${i.connects.map((c) => esc(c.name)).join(" ↔ ")}</small>`)).join("")}</ul>
         ${ends.length >= 2 ? addForm("interface") : `<p class="note">${esc(t("model.needTwo"))}</p>`}</section>
     </div>
     ${drawParts()}`;
+  box.querySelector(".ws-bom").onclick = () => bomDialog();
   if (box.querySelector(".ws-rename")) box.querySelector(".ws-rename").onclick = (e) => renameForm(e.target.closest(".ws-head"), m.product.title);
   box.querySelectorAll("button.add").forEach((b) => b.onclick = () => { S.adding = b.dataset.add; S.seen.model = null; drawModel(); });
   box.querySelectorAll("form.add-form").forEach((f) => {
@@ -221,6 +224,75 @@ async function drawModel() {
   box.querySelectorAll("button[data-reserve]").forEach((b) => b.onclick = async () => {
     const r = await change("POST", `${P()}/parts/reserve`, { article: b.dataset.reserve, qty: Number(b.dataset.qty) }, t("parts.reserved"));
     if (r) S.bomFor = null;
+  });
+}
+
+// ---------------------------------------------------------- a BOM in ----
+// A bill of materials in Markdown into the model (bom_import.py; ADR-0014 in
+// maker-5-shared): a preview first, then one revision. Articles the stock
+// lacks are proposed in the cloud, for an admin to accept on Materials.
+
+function bomDialog() {
+  core.dialog(t("bom.import"), `
+    <p class="note">${esc(t("bom.hint"))}</p>
+    <label>${esc(t("bom.file"))} <input type="file" name="file" accept=".md,.markdown,.txt,text/markdown,text/plain"></label>
+    <textarea name="text" rows="10" spellcheck="false" placeholder="${esc(t("bom.paste"))}"></textarea>
+    <div class="actions"><button value="cancel" formnovalidate>${esc(t("model.cancel"))}</button>
+      <button value="ok" class="primary">${esc(t("bom.preview"))}</button></div>`, (form, dlg) => {
+    form.querySelector('[name="file"]').onchange = async (e) => {
+      const f = e.target.files[0];
+      if (f) form.querySelector('[name="text"]').value = await f.text();
+    };
+    form.onsubmit = async (ev) => {
+      if (ev.submitter && ev.submitter.value === "cancel") { form.onsubmit = null; return; }
+      ev.preventDefault();
+      const text = form.querySelector('[name="text"]').value;
+      if (!text.trim()) return;
+      form.onsubmit = null;
+      dlg.close();
+      try {
+        const pv = await busy(() => core.api("POST", `${P()}/import/bom`, { text }));
+        bomPreview(pv);
+      } catch (err) { core.toast(failed(err), true); }
+    };
+  });
+}
+
+function bomPreview(pv) {
+  const art = (x) => x.article ? `🔩 ${esc(x.article.name)}` : x.propose ? esc(t("bom.new", { cat: word("cat", x.propose.category) })) : "";
+  const row = (x, i, what) => `<tr><td><input type="checkbox" data-${what}="${i}" ${x.include ? "checked" : ""}></td>
+    <td>${esc(x.name)}${x.supply ? ` <span class="pill supply-${esc(x.supply)}">${esc(t(`supply.${x.supply}`))}</span>` : ""}</td>
+    <td>${art(x)}${x.propose && what === "b" ? ` <label class="note"><input type="checkbox" data-art="${i}" ${x.include_article ? "checked" : ""}> ${esc(t("bom.propose"))}</label>` : ""}</td></tr>`;
+  const mods = pv.modules.map((x, i) => `<tr><td><input type="checkbox" data-m="${i}" ${x.include ? "checked" : ""}></td>
+    <td>${esc(x.name)} <small class="note">${esc(x.version)}</small></td><td>${x.runs_on ? esc(t("bom.runsOn", { on: x.runs_on })) : ""}</td></tr>`).join("");
+  core.dialog(t("bom.previewOf", { n: pv.blocks.length + pv.modules.length }), `
+    ${pv.stock_error ? `<p class="note warn">${esc(t("bom.noStock", { why: pv.stock_error }))}</p>` : ""}
+    <div class="bom-preview">
+      <h3>${esc(t("model.blocks"))}</h3>
+      <table>${pv.blocks.map((x, i) => row(x, i, "b")).join("") || `<tr><td class="note">${esc(t("bom.none"))}</td></tr>`}</table>
+      <h3>${esc(t("model.modules"))}</h3>
+      <table>${mods || `<tr><td class="note">${esc(t("bom.none"))}</td></tr>`}</table>
+      ${pv.tools.length ? `<h3>${esc(t("bom.tools"))}</h3><table>${pv.tools.map((x, i) => row(x, i, "t")).join("")}</table>` : ""}
+      ${pv.skipped.length ? `<p class="note">${esc(t("bom.skipped", { names: pv.skipped.join(", ") }))}</p>` : ""}
+    </div>
+    <div class="actions"><button value="cancel" formnovalidate>${esc(t("model.cancel"))}</button>
+      <button value="ok" class="primary">${esc(t("bom.create"))}</button></div>`, (form, dlg) => {
+    form.onsubmit = async (ev) => {
+      form.onsubmit = null;
+      if (ev.submitter && ev.submitter.value === "cancel") return;
+      ev.preventDefault();
+      const on = (sel) => form.querySelector(sel)?.checked ?? false;
+      pv.blocks.forEach((x, i) => { x.include = on(`[data-b="${i}"]`); x.include_article = on(`[data-art="${i}"]`); });
+      pv.modules.forEach((x, i) => { x.include = on(`[data-m="${i}"]`); });
+      pv.tools.forEach((x, i) => { x.include = on(`[data-t="${i}"]`); });
+      dlg.close();
+      try {
+        const r = await busy(() => core.api("POST", `${P()}/import/bom/apply`, { preview: pv }));
+        core.toast(t("bom.done", { b: r.made.blocks.length, m: r.made.modules.length, a: r.proposed.length }) + (r.propose_error ? ` ${t("bom.proposeFailed", { why: r.propose_error })}` : ""), Boolean(r.propose_error));
+        S.seen = {}; S.bomFor = null;
+        refresh();
+      } catch (err) { core.toast(failed(err), true); }
+    };
   });
 }
 
@@ -519,6 +591,7 @@ async function refresh() {
     await drawList();
     if (S.tab === "files") return drawFiles();
     if (S.tab === "model") await drawModel();
+    if (S.tab === "canvas") await window.canvasView.draw(P(), S.ws);
     if (S.tab === "proposals") await drawProposals();
     if (S.tab === "history") await drawHistory();
   } catch (err) {

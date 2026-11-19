@@ -7,7 +7,7 @@ maker-5-shared).
 The stock lives in the cloud (ADR-0008): articles with what is on hand,
 reserved and free, units with their codes. This edge reads it through the
 edge API and takes parts for a product, as the organisation's edge; it never
-edits the catalogue, receives stock or prints codes (a person does that on
+edits the catalogue (it only proposes articles), receives stock or prints codes (a person does that on
 the site).
 
 A product here is its workspace in the cloud: found by the id the sync keeps
@@ -18,6 +18,8 @@ for it (edge/sync.py), else by NAME (edge/cloud.py space_slug).
                              against what the product took and what is free
     take(products, p, step, article, qty | unit)
                              reserve, release or return parts for the product
+    propose(articles)        articles a BOM import needs, proposed for an admin
+                             to accept (ADR-0014); the only catalogue write
     boxes(q, workspace)      the organisation's boxes (ADR-0011), read only
     box(code_or_id)          what a box holds, where it is, its links and files
 
@@ -54,6 +56,13 @@ def unit(unit_id: str, profile: Optional[str] = None) -> Dict[str, Any]:
 def resolve(code: str, profile: Optional[str] = None) -> Dict[str, Any]:
     """What a scanned or typed code points at: one of our labels, an EAN, a maker's QR."""
     return cloud.call("materials/resolve", {"code": code}, profile)
+
+
+def propose(articles: List[Dict[str, Any]], profile: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Articles a BOM import needs and the stock lacks (ADR-0014): made in the
+    cloud with no stock, marked proposed until an admin accepts them. A name
+    the stock has already gives the existing article."""
+    return cloud.call("materials/propose", {"articles": articles}, profile).get("articles", [])
 
 
 def boxes(q: str = "", workspace: str = "", profile: Optional[str] = None) -> List[Dict[str, Any]]:

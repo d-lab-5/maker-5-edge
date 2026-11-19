@@ -98,3 +98,39 @@ m5sh:ProposalShape a sh:NodeShape ;
         sh:minCount 1 ;
         sh:message "A proposal says which agent made it (prov:wasAttributedTo)."@en ;
     ] .
+
+# --- Hardware and supply (ADR-0014) -----------------------------------
+
+m5sh:InPinRoles a sh:NodeShape ;
+    sh:property [ sh:path skos:inScheme ; sh:hasValue m5:PinRoles ] .
+
+m5sh:InSupplyStates a sh:NodeShape ;
+    sh:property [ sh:path skos:inScheme ; sh:hasValue m5:SupplyStates ] .
+
+m5sh:PinShape a sh:NodeShape ;
+    sh:targetClass m5:Pin ;
+    sh:property [ sh:path schema:name ; sh:minCount 1 ; sh:message "A pin needs a name."@en ] ;
+    sh:property [ sh:path m5:pinOf ; sh:minCount 1 ; sh:maxCount 1 ; sh:class m5:Block ;
+                  sh:message "A pin belongs to exactly one block."@en ] ;
+    sh:property [ sh:path m5:pinNumber ; sh:maxCount 1 ; sh:datatype xsd:integer ] ;
+    sh:property [ sh:path m5:pinRole ; sh:maxCount 1 ; sh:node m5sh:InPinRoles ;
+                  sh:message "A pin's role is a concept from m5:PinRoles."@en ] .
+
+m5sh:WireShape a sh:NodeShape ;
+    sh:targetClass m5:Wire ;
+    sh:property [ sh:path m5:wireEnd ; sh:minCount 2 ; sh:maxCount 2 ; sh:class m5:Pin ;
+                  sh:message "A wire joins exactly two pins."@en ] ;
+    sh:property [ sh:path m5:wireColor ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+    sh:property [ sh:path m5:alongInterface ; sh:maxCount 1 ; sh:class m5:Interface ] .
+
+m5sh:BlockSupplyShape a sh:NodeShape ;
+    sh:targetClass m5:Block ;
+    sh:property [ sh:path m5:supplyState ; sh:maxCount 1 ; sh:node m5sh:InSupplyStates ;
+                  sh:message "A block's supply is a concept from m5:SupplyStates."@en ] ;
+    sh:property [ sh:path m5:canvasX ; sh:maxCount 1 ; sh:datatype xsd:integer ] ;
+    sh:property [ sh:path m5:canvasY ; sh:maxCount 1 ; sh:datatype xsd:integer ] .
+
+m5sh:ModuleHostShape a sh:NodeShape ;
+    sh:targetClass m5:SoftwareModule ;
+    sh:property [ sh:path m5:runsOn ; sh:maxCount 1 ; sh:class m5:Block ;
+                  sh:message "A software module runs on at most one block."@en ] .

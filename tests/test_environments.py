@@ -67,3 +67,17 @@ def test_a_rename_in_the_cloud_is_only_a_label_here(env, monkeypatch):
         assert r.status_code == 409, "renamed in the cloud, not here"
     finally:
         SPACES[1]["name"] = "Shared"
+
+
+def test_an_export_is_named_after_the_workspace(env, monkeypatch):
+    client = web.app.test_client()
+    client.get("/api/products")                       # first seen as Shared: its folder is shared/
+    monkeypatch.setattr(web, "_tenant_seen", {})
+    SPACES[1]["name"] = "Door bell"                    # then renamed in the cloud
+    try:
+        client.get("/api/products")
+        r = client.get("/api/products/shared/export.ttl")
+        assert r.status_code == 200
+        assert 'filename="door-bell.ttl"' in r.headers["Content-Disposition"], "the title, not the folder"
+    finally:
+        SPACES[1]["name"] = "Shared"

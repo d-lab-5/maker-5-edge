@@ -1,0 +1,293 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later
+ * The hardware canvas (ADR-0014 in maker-5-shared): the workspace's blocks as
+ * parts with their pins, and the wires between pins. Everything drawn here is
+ * in the model (products.py canvas/place/pins/wires), so it syncs with the
+ * cloud and the chat reads it with canvas().
+ *
+ *   drag a part        moves it (saved when you let go: one revision)
+ *   click a pin, then another     a wire, in the colour chosen above
+ *   click a wire       its colour, or remove it
+ *   drag the background, the wheel, − / +    pan and zoom
+ */
+(() => {
+  "use strict";
+  const NS = "http://www.w3.org/2000/svg";
+  const esc = (s) => core.esc(String(s ?? ""));
+  const t = (k, v) => window.i18n.t(k, v);
+  const failed = (err) => (err && err.errors) ? err.errors.join("; ") : t("failed");
+  const W = 190, HEAD = 28, ROW = 17, PAD = 8, GRID = 10;
+  const COLORS = ["red", "black", "yellow", "white", "blue", "green", "orange", "purple"];
+  const ROLE_COLOR = { power: "red", ground: "black", signal: "blue", audio: "purple", video: "orange", data: "green" };
+  const C = { base: "", ws: "", data: null, key: "", view: { x: -40, y: -40, k: 1 }, from: null, color: "yellow", dragging: false };
+
+  const el = (tag, attrs = {}, parent) => {
+    const n = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    if (parent) parent.appendChild(n);
+    return n;
+  };
+  const snap = (v) => Math.round(v / GRID) * GRID;
+
+  /** Which side and row a pin sits on: a long header odd left and even right,
+   *  as it is on the board; a small part its first half left. */
+  function layout(b) {
+    const pins = b.pins;
+    const header = pins.length >= 20;
+    const left = [], right = [];
+    pins.forEach((p, i) => ((header ? p.n % 2 === 1 : i < Math.ceil(pins.length / 2)) ? left : right).push(p));
+    const rows = Math.max(left.length, right.length, 1);
+    const at = {};
+    left.forEach((p, i) => { at[p.id] = { x: 0, y: HEAD + PAD + i * ROW + ROW / 2, side: -1 }; });
+    right.forEach((p, i) => { at[p.id] = { x: W, y: HEAD + PAD + i * ROW + ROW / 2, side: 1 }; });
+    return { at, h: HEAD + PAD * 2 + rows * ROW };
+  }
+
+  async function api(method, path, payload) {
+    try { return await core.api(method, path, payload); } catch (err) { core.toast(failed(err), true); return null; }
+  }
+
+  async function reload() {
+    C.key = "";
+    await draw(C.base, C.ws);
+  }
+
+  async function draw(base, ws) {
+    const box = document.getElementById("tab-canvas");
+    if (!box) return;
+    if (!ws) { box.innerHTML = `<p class="note">${esc(t("model.choose"))}</p>`; C.key = ""; return; }
+    if (C.dragging || C.from) return;                              // never under the person's hand
+    const data = await core.api("GET", `${base}/canvas`);
+    const key = ws + JSON.stringify(data) + C.color;
+    if (key === C.key && box.querySelector("svg")) return;
+    if (C.ws !== ws) C.view = { x: -40, y: -40, k: 1 };
+    Object.assign(C, { base, ws, data, key });
+    const placed = data.blocks.filter((b) => b.x !== null);
+    const loose = data.blocks.filter((b) => b.x === null);
+    box.innerHTML = `
+      <div class="hw-bar">
+        <label>${esc(t("hw.color"))} <select class="hw-color" data-help="help.hw.color">${COLORS.map((c) =>
+          `<option value="${c}" ${c === C.color ? "selected" : ""}>${esc(t(`hw.c.${c}`))}</option>`).join("")}</select></label>
+        <button class="hw-zoom" data-z="-1" data-help="help.hw.zoom">−</button>
+        <button class="hw-zoom" data-z="1" data-help="help.hw.zoom">+</button>
+        <button class="hw-fit" data-help="help.hw.fit">${esc(t("hw.fit"))}</button>
+        <span class="hw-status note">${esc(t("hw.hint"))}</span>
+      </div>
+      <div class="hw">
+        <aside class="hw-side">
+          <h3>${esc(t("hw.loose"))}</h3>
+          ${loose.length ? `<ul>${loose.map((b) => `<li><span>${esc(b.name)}</span>
+            <button data-place="${esc(b.id)}" data-help="help.hw.place">${esc(t("hw.place"))}</button></li>`).join("")}</ul>`
+            : `<p class="note">${esc(data.blocks.length ? t("hw.allPlaced") : t("hw.noBlocks"))}</p>`}
+          ${placed.length ? `<h3>${esc(t("hw.placed"))}</h3><ul>${placed.map((b) => `<li><span>${esc(b.name)}</span>
+            <button data-pins="${esc(b.id)}" data-help="help.hw.pins">${esc(t("hw.pins"))}</button></li>`).join("")}</ul>` : ""}
+          <p class="note">${esc(t("hw.wires", { n: data.wires.length }))}</p>
+        </aside>
+        <div class="hw-stage"></div>
+      </div>`;
+    const svg = el("svg", { class: "hw-svg", role: "img", "aria-label": t("tab.canvas") }, box.querySelector(".hw-stage"));
+    const defs = el("defs", {}, svg);
+    const pat = el("pattern", { id: "hw-grid", width: GRID * 2, height: GRID * 2, patternUnits: "userSpaceOnUse" }, defs);
+    el("circle", { cx: 1, cy: 1, r: 0.8, class: "hw-dot" }, pat);
+    const world = el("g", { class: "hw-world" }, svg);
+    el("rect", { x: -5000, y: -5000, width: 10000, height: 10000, fill: "url(#hw-grid)", class: "hw-bg" }, world);
+    const wiresG = el("g", {}, world);
+    const partsG = el("g", {}, world);
+
+    const geo = {};
+    for (const b of placed) geo[b.id] = { b, ...layout(b) };
+    const pinPoint = (pinId, blockId) => {
+      const g = geo[blockId];
+      if (!g || !g.at[pinId]) return null;
+      const a = g.at[pinId];
+      return { x: g.b.x + a.x, y: g.b.y + a.y, side: a.side };
+    };
+
+    function drawWires() {
+      wiresG.innerHTML = "";
+      for (const w of data.wires) {
+        const [a, b] = w.ends.map((e) => pinPoint(e.pin, e.block));
+        if (!a || !b) continue;
+        const ax = a.x + a.side * 18, bx = b.x + b.side * 18, mx = (ax + bx) / 2;
+        const d = `M${a.x},${a.y} H${ax} H${mx} V${b.y} H${bx} H${b.x}`;
+        const role = (geo[w.ends[0].block]?.b.pins.find((p) => p.id === w.ends[0].pin) || {}).role;
+        const color = w.color || ROLE_COLOR[role] || "gray";
+        el("path", { d, class: "hw-wire-hit", "data-wire": w.id }, wiresG);
+        const path = el("path", { d, class: "hw-wire", stroke: color, "data-wire": w.id }, wiresG);
+        const names = w.ends.map((e) => `${geo[e.block]?.b.name ?? e.block} · ${geo[e.block]?.b.pins.find((p) => p.id === e.pin)?.name ?? e.pin}`);
+        el("title", {}, path).textContent = names.join(" → ");
+      }
+    }
+
+    for (const g of Object.values(geo)) {
+      const b = g.b;
+      const part = el("g", { class: `hw-part${b.supply === "to-buy" ? " to-buy" : ""}`, transform: `translate(${b.x},${b.y})`, "data-block": b.id }, partsG);
+      el("rect", { width: W, height: g.h, rx: 6, class: "hw-body" }, part);
+      el("rect", { width: W, height: HEAD, rx: 6, class: "hw-head" }, part);
+      const title = el("text", { x: 10, y: 18, class: "hw-name" }, part);
+      title.textContent = b.name.length > 26 ? b.name.slice(0, 25) + "…" : b.name;
+      el("title", {}, title).textContent = b.name + (b.supply ? ` · ${t(`supply.${b.supply}`)}` : "");
+      for (const p of b.pins) {
+        const a = g.at[p.id];
+        const pin = el("g", { class: `hw-pin role-${p.role || "none"}`, "data-pin": p.id, "data-block": b.id }, part);
+        el("circle", { cx: a.x, cy: a.y, r: 5 }, pin);
+        const label = el("text", { x: a.x - a.side * 9, y: a.y + 4, "text-anchor": a.side < 0 ? "start" : "end", class: "hw-pinname" }, pin);
+        label.textContent = p.name.length > 12 ? p.name.slice(0, 11) + "…" : p.name;
+        const reach = data.wires.filter((w) => w.ends.some((e) => e.pin === p.id))
+          .map((w) => w.ends.find((e) => e.pin !== p.id)).map((e) => `${geo[e.block]?.b.name ?? e.block} ${geo[e.block]?.b.pins.find((x) => x.id === e.pin)?.name ?? ""}`);
+        el("title", {}, pin).textContent = `${p.name} (${p.n})${p.role ? " · " + t(`role.${p.role}`) : ""}${reach.length ? " → " + reach.join(", ") : ""}`;
+      }
+    }
+    drawWires();
+
+    const apply = () => world.setAttribute("transform", `translate(${-C.view.x * C.view.k},${-C.view.y * C.view.k}) scale(${C.view.k})`);
+    apply();
+    const toWorld = (ev) => {
+      const r = svg.getBoundingClientRect();
+      return { x: (ev.clientX - r.left) / C.view.k + C.view.x, y: (ev.clientY - r.top) / C.view.k + C.view.y };
+    };
+    const status = (msg) => { const s = box.querySelector(".hw-status"); if (s) s.textContent = msg; };
+
+    // drag a part, or the background to pan
+    svg.addEventListener("pointerdown", (ev) => {
+      if (ev.target.closest(".hw-pin") || ev.target.closest("[data-wire]")) return;
+      const part = ev.target.closest(".hw-part");
+      const start = toWorld(ev);
+      const g = part ? geo[part.dataset.block] : null;
+      const from = g ? { x: g.b.x, y: g.b.y } : { ...C.view };
+      const sx = ev.clientX, sy = ev.clientY;
+      C.dragging = true;
+      svg.setPointerCapture(ev.pointerId);
+      const move = (e) => {
+        if (g) {
+          const p = toWorld(e);
+          g.b.x = snap(from.x + p.x - start.x); g.b.y = snap(from.y + p.y - start.y);
+          part.setAttribute("transform", `translate(${g.b.x},${g.b.y})`);
+          drawWires();
+        } else {
+          C.view.x = from.x - (e.clientX - sx) / C.view.k; C.view.y = from.y - (e.clientY - sy) / C.view.k;
+          apply();
+        }
+      };
+      const up = async () => {
+        svg.removeEventListener("pointermove", move);
+        svg.removeEventListener("pointerup", up);
+        C.dragging = false;
+        if (g && (g.b.x !== from.x || g.b.y !== from.y)) {
+          if (await api("POST", `${C.base}/canvas/place`, { block: g.b.id, x: g.b.x, y: g.b.y })) C.key = "";
+        }
+      };
+      svg.addEventListener("pointermove", move);
+      svg.addEventListener("pointerup", up);
+    });
+    svg.addEventListener("wheel", (ev) => {
+      ev.preventDefault();
+      const p = toWorld(ev);
+      const k = Math.min(3, Math.max(0.3, C.view.k * (ev.deltaY < 0 ? 1.1 : 1 / 1.1)));
+      const r = svg.getBoundingClientRect();
+      C.view = { k, x: p.x - (ev.clientX - r.left) / k, y: p.y - (ev.clientY - r.top) / k };
+      apply();
+    }, { passive: false });
+
+    // a wire: one pin, then another
+    svg.querySelectorAll(".hw-pin").forEach((pin) => pin.addEventListener("click", async (ev) => {
+      ev.stopPropagation();
+      const id = pin.dataset.pin;
+      if (!C.from) {
+        C.from = id;
+        pin.classList.add("is-from");
+        status(t("hw.pickSecond"));
+        return;
+      }
+      const a = C.from;
+      C.from = null;
+      svg.querySelectorAll(".is-from").forEach((x) => x.classList.remove("is-from"));
+      if (a === id) { status(t("hw.hint")); return; }
+      if (await api("POST", `${C.base}/wires`, { from: a, to: id, color: C.color })) {
+        core.toast(t("hw.wired"));
+        await reload();
+      } else status(t("hw.hint"));
+    }));
+    svg.querySelectorAll("path[data-wire]").forEach((p) => p.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      wireDialog(data.wires.find((w) => w.id === p.dataset.wire));
+    }));
+    const escape = (ev) => {
+      if (ev.key !== "Escape" || !C.from) return;
+      C.from = null;
+      svg.querySelectorAll(".is-from").forEach((x) => x.classList.remove("is-from"));
+      status(t("hw.hint"));
+    };
+    document.removeEventListener("keydown", C.escape || (() => {}));
+    C.escape = escape;
+    document.addEventListener("keydown", escape);
+
+    box.querySelector(".hw-color").onchange = (e) => { C.color = e.target.value; };
+    box.querySelectorAll(".hw-zoom").forEach((b) => b.onclick = () => {
+      C.view.k = Math.min(3, Math.max(0.3, C.view.k * (b.dataset.z > 0 ? 1.2 : 1 / 1.2)));
+      apply();
+    });
+    box.querySelector(".hw-fit").onclick = () => {
+      if (!placed.length) return;
+      const xs = placed.map((b) => b.x), ys = placed.map((b) => b.y);
+      const r = svg.getBoundingClientRect();
+      const w = Math.max(...xs) + W - Math.min(...xs) + 80, h = Math.max(...placed.map((b) => b.y + geo[b.id].h)) - Math.min(...ys) + 80;
+      const k = Math.min(3, Math.max(0.3, Math.min(r.width / w, r.height / h)));
+      C.view = { k, x: Math.min(...xs) - 40, y: Math.min(...ys) - 40 };
+      apply();
+    };
+    box.querySelectorAll("[data-place]").forEach((b) => b.onclick = async () => {
+      const n = placed.length;
+      const x = snap(C.view.x + 60 + (n % 4) * (W + 80)), y = snap(C.view.y + 60 + Math.floor(n / 4) * 320);
+      if (await api("POST", `${C.base}/canvas/place`, { block: b.dataset.place, x, y })) await reload();
+    });
+    box.querySelectorAll("[data-pins]").forEach((b) => b.onclick = () => pinsDialog(data.blocks.find((x) => x.id === b.dataset.pins)));
+  }
+
+  function wireDialog(w) {
+    if (!w) return;
+    core.dialog(t("hw.wire"), `
+      <label>${esc(t("hw.color"))} <select name="color">${COLORS.map((c) =>
+        `<option value="${c}" ${c === w.color ? "selected" : ""}>${esc(t(`hw.c.${c}`))}</option>`).join("")}</select></label>
+      <div class="actions"><button value="remove" class="danger" formnovalidate>${esc(t("hw.unwire"))}</button>
+        <button value="cancel" formnovalidate>${esc(t("model.cancel"))}</button>
+        <button value="ok" class="primary">${esc(t("model.save"))}</button></div>`, (form, dlg) => {
+      form.onsubmit = async (ev) => {
+        form.onsubmit = null;
+        const v = ev.submitter && ev.submitter.value;
+        if (v === "cancel") return;
+        ev.preventDefault(); dlg.close();
+        const ok = v === "remove"
+          ? await api("DELETE", `${C.base}/items/${encodeURIComponent(w.id)}`)
+          : await api("POST", `${C.base}/wires/${encodeURIComponent(w.id)}`, { color: form.querySelector('[name="color"]').value });
+        if (ok) await reload();
+      };
+    });
+  }
+
+  /** A block's pins as lines: "11 GPIO17 signal". */
+  function pinsDialog(b) {
+    if (!b) return;
+    const text = b.pins.map((p) => `${p.n} ${p.name}${p.role ? " " + p.role : ""}`).join("\n");
+    core.dialog(t("hw.pinsOf", { name: b.name }), `
+      <p class="note">${esc(t("hw.pinsHint"))}</p>
+      <textarea name="pins" rows="14" spellcheck="false">${esc(text)}</textarea>
+      <div class="actions"><button value="cancel" formnovalidate>${esc(t("model.cancel"))}</button>
+        <button value="ok" class="primary">${esc(t("model.save"))}</button></div>`, (form, dlg) => {
+      form.onsubmit = async (ev) => {
+        form.onsubmit = null;
+        if (ev.submitter && ev.submitter.value === "cancel") return;
+        ev.preventDefault(); dlg.close();
+        const roles = ["power", "ground", "signal", "audio", "video", "data"];
+        const pins = form.querySelector('[name="pins"]').value.split("\n").map((l) => l.trim()).filter(Boolean).map((l, i) => {
+          const parts = l.split(/\s+/);
+          const n = /^\d+$/.test(parts[0]) ? Number(parts.shift()) : i + 1;
+          const role = roles.includes((parts[parts.length - 1] || "").toLowerCase()) ? parts.pop().toLowerCase() : "";
+          return { n, name: parts.join(" ") || String(n), role };
+        });
+        if (await api("POST", `${C.base}/canvas/pins`, { block: b.id, pins })) await reload();
+      };
+    });
+  }
+
+  window.canvasView = { draw };
+})();

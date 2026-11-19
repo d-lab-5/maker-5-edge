@@ -74,7 +74,11 @@ CHAT_ALLOWED: List[Tuple[str, str]] = [
     ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/(blocks|modules|interfaces|proposals)"),
     ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/interfaces/i-[a-z0-9]{8}/connects"),
     ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/items/(b|m|i|pr)-[a-z0-9]{8}/rename"),
-    ("DELETE", r"/api/products/[a-z][a-z0-9-]{0,39}/items/(b|m|i|pr)-[a-z0-9]{8}"),
+    ("DELETE", r"/api/products/[a-z][a-z0-9-]{0,39}/items/(b|m|i|pr|w)-[a-z0-9]{8}"),
+    # a BOM into the model, and the hardware canvas (ADR-0014 in maker-5-shared)
+    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/import/bom/apply"),
+    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/canvas/(place|pins)"),
+    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/wires(/w-[a-z0-9]{8})?"),
     ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/items/(b|m)-[a-z0-9]{8}/article"),
     # parts from the workspace's stock (ADR-0010 in maker-5-shared)
     ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/parts/(reserve|release|return)"),

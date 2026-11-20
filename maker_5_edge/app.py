@@ -33,11 +33,13 @@ from flask import abort, jsonify, render_template, request
 from . import bom_import
 from . import fritzing as fz
 from . import deploy as dp
+from . import drawing
 from . import git_repo
 from . import inbox as ib
 from . import materials as mt
 from . import parts
 from . import products as pr
+from . import wokwi
 from . import revisions as rv
 from . import selection as sel
 from .core import server
@@ -438,6 +440,78 @@ def canvas_fritzing(p: str):
         pins = parts.with_ports(parts.physical(part["pins"], known["pins"]), known["pins"]) if known["title"] else part["pins"]
         return {**products().use_part(p, str(b.get("block") or ""), part["path"], pins),
                 "title": part["title"], "author": part["author"], "license": part["license"]}
+    return run(used)
+
+
+# ---- a block's picture (ADR-0021): Fritzing, Wokwi, drawn from its pins, or the agent's
+
+SVG_HEADERS = {"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; img-src data:",
+               "X-Content-Type-Options": "nosniff"}
+
+
+def _svg(data, cache: str = "private, no-cache"):
+    return app.response_class(data, mimetype="image/svg+xml", headers={**SVG_HEADERS, "Cache-Control": cache})
+
+
+@app.get("/api/wokwi/search")
+def wokwi_search():
+    return run(wokwi.search, request.args.get("q", ""), request.args.get("limit", 30, type=int))
+
+
+@app.get("/api/wokwi/part")
+def wokwi_part():
+    return run(wokwi.part, request.args.get("name", ""))
+
+
+@app.get("/api/wokwi/image")
+def wokwi_image():
+    try:
+        return _svg(wokwi.image(request.args.get("name", "")), "private, max-age=86400")
+    except ValueError:
+        abort(404)
+
+
+@app.get("/api/products/<p>/blocks/<b>/image.svg")
+def block_image(p: str, b: str):
+    """A block's drawn picture: the agent's, else one drawn from its pins."""
+    try:
+        block = next(x for x in products().canvas(p)["blocks"] if x["id"] == b)
+    except (StopIteration, pr.NotFound):
+        abort(404)
+    # ?drawn=1: the drawing from its pins, as the Image window previews it
+    svg = products().drawing(p, b) if block["image"]["kind"] == "agent" and not request.args.get("drawn") else ""
+    return _svg(svg or drawing.generated(block["name"], block["pins"]))
+
+
+@app.post("/api/products/<p>/canvas/image")
+def canvas_image(p: str):
+    """{block, kind: fritzing|wokwi|drawn|agent|none, ref?, svg?}: where the
+    block's picture comes from. A library part brings its pins (and the
+    board's ports, parts.with_ports); an agent's drawing is checked first."""
+    b = body()
+    kind, ref, block = str(b.get("kind") or ""), str(b.get("ref") or ""), str(b.get("block") or "")
+
+    def used():
+        P = products()
+        here = next((x for x in P.canvas(p)["blocks"] if x["id"] == block), None)
+        if here is None:
+            raise pr.NotFound(f"no block {block}")
+        if kind == "fritzing":
+            part = fz.part(ref)
+            known = parts.pins_for(here["name"])
+            pins = parts.with_ports(parts.physical(part["pins"], known["pins"]), known["pins"]) if known["title"] else part["pins"]
+            return {**P.use_image(p, block, "fritzing", part["path"], pins), "title": part["title"],
+                    "author": part["author"], "license": part["license"]}
+        if kind == "wokwi":
+            part = wokwi.part(ref)
+            known = parts.pins_for(here["name"])
+            pins = [{"n": x["n"], "name": x["name"], "role": x["role"]} for x in part["pins"]]
+            pins = parts.with_ports(pins, known["pins"]) if known["title"] else pins
+            return {**P.use_image(p, block, "wokwi", part["name"], pins), "title": part["title"], "license": part["license"]}
+        if kind == "agent":
+            svg = drawing.clean(str(b.get("svg") or ""), here["pins"])
+            return P.use_image(p, block, "agent", "", None, svg)
+        return P.use_image(p, block, kind)
     return run(used)
 
 

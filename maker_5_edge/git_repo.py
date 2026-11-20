@@ -28,6 +28,7 @@ The repository, in <workspace folder>/repo/:
     hardware/model.ttl     the model without stock links, quantities,
                            proposals or who decided what
     hardware/wiring.svg    the hardware canvas
+    hardware/images/       each block's picture as SVG (Fritzing, Wokwi, drawn)
     hardware/netlist.md    every wire, pin to pin
     hardware/bom.md        the parts by name and count; no stock, no prices
     NOTICE                 the Fritzing parts used, with their authors
@@ -290,16 +291,21 @@ W, HEAD, ROW, PAD, IMG = 190, 28, 17, 8, 110
 ROLE_COLOR = {"power": "red", "ground": "black", "signal": "blue", "audio": "purple", "video": "orange", "data": "green"}
 
 
+def _has_image(b: Dict[str, Any]) -> bool:
+    return bool(b.get("fritzing")) or (b.get("image") or {}).get("kind", "none") != "none"
+
+
 def _layout(b: Dict[str, Any]) -> Dict[str, Any]:
     """The canvas's own layout (static/canvas.js layout()), so the picture matches the page."""
     pins = b["pins"]
     header = len(pins) >= 20
     left = [x for i, x in enumerate(pins) if (x["n"] % 2 == 1 if header else i < (len(pins) + 1) // 2)]
     right = [x for x in pins if x not in left]
-    w = W + IMG if b.get("fritzing") else W
+    pic = _has_image(b)
+    w = W + IMG if pic else W
     at = {x["id"]: (0, HEAD + PAD + i * ROW + ROW / 2, -1) for i, x in enumerate(left)}
     at.update({x["id"]: (w, HEAD + PAD + i * ROW + ROW / 2, 1) for i, x in enumerate(right)})
-    h = max(HEAD + PAD * 2 + max(len(left), len(right), 1) * ROW, HEAD + IMG + PAD * 2 if b.get("fritzing") else 0)
+    h = max(HEAD + PAD * 2 + max(len(left), len(right), 1) * ROW, HEAD + IMG + PAD * 2 if pic else 0)
     return {"at": at, "w": w, "h": h}
 
 
@@ -403,6 +409,17 @@ def notice(canvas: Dict[str, Any]) -> str:
             except Exception:  # noqa: BLE001 - a credit without its title is still a credit
                 lines.append(f"- {path}")
         lines.append("")
+    wk = sorted({b["image"]["ref"] for b in canvas["blocks"] if (b.get("image") or {}).get("kind") == "wokwi"})
+    if wk:
+        from . import wokwi
+        c = wokwi.credit()
+        lines += ["Breadboard pictures and pinouts of these parts come from the Wokwi elements,",
+                  f"{c['source']}, {c['copyright']}, licensed {c['license']}:", ""]
+        lines += [f"- {wokwi.part(n)['title']} ({n})" for n in wk] + [""]
+    drawn = sorted(b["name"] for b in canvas["blocks"] if (b.get("image") or {}).get("kind") in ("drawn", "agent"))
+    if drawn:
+        lines += ["These parts' pictures were drawn for this design, from their pins or by its",
+                  "agent, and are licensed with the hardware (CERN-OHL-S-2.0): " + ", ".join(drawn) + ".", ""]
     return "\n".join(lines)
 
 
@@ -488,6 +505,37 @@ def pin_check(d: Path, pm: Dict[str, Any]) -> List[Dict[str, Any]]:
     return out[:50]
 
 
+def block_image(products: Any, p: str, b: Dict[str, Any]) -> Optional[bytes]:
+    """A block's picture as SVG bytes, whatever its source; None if it has none."""
+    from . import drawing, wokwi
+    from . import fritzing as fz
+    kind = (b.get("image") or {}).get("kind", "none")
+    try:
+        if kind == "fritzing":
+            return fz.image(b["image"]["ref"])
+        if kind == "wokwi":
+            return wokwi.image(b["image"]["ref"])
+        if kind == "agent":
+            return products.drawing(p, b["id"]).encode("utf-8")
+        if kind == "drawn":
+            return drawing.generated(b["name"], b["pins"]).encode("utf-8")
+    except Exception:  # noqa: BLE001 - a library out of reach: the push goes on without the picture
+        return None
+    return None
+
+
+def _images(products: Any, p: str, canvas: Dict[str, Any], folder: Path) -> None:
+    """hardware/images/<block>.svg for each block with a picture (ADR-0021)."""
+    if folder.exists():
+        for f in folder.glob("*.svg"):
+            f.unlink()
+    for b in canvas["blocks"]:
+        svg = block_image(products, p, b)
+        if svg:
+            folder.mkdir(parents=True, exist_ok=True)
+            (folder / f"{b['id']}.svg").write_bytes(svg)
+
+
 def prepare(products: Any, p: str) -> Dict[str, Any]:
     """Write hardware/ and NOTICE again from the model (they are the model's, not edited here)."""
     d = _linked(products, p)
@@ -501,6 +549,7 @@ def prepare(products: Any, p: str) -> Dict[str, Any]:
     (hw / "netlist.md").write_text(netlist_md(canvas, title), encoding="utf-8")
     (hw / "bom.md").write_text(bom_md(products.model(p), title), encoding="utf-8")
     (d / "NOTICE").write_text(notice(canvas), encoding="utf-8")
+    _images(products, p, canvas, hw / "images")
     pm = pin_map(products, p)
     gen = d / GENERATED
     gen.mkdir(parents=True, exist_ok=True)

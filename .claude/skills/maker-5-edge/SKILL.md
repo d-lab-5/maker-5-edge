@@ -48,6 +48,13 @@ you and the person at the browser work on the same files.
 - The edge layer adds `connections`, `knowledge`, `sync_knowledge`, `jobs`;
   `server_url()` gives the page to hand to a person.
 
+## A block's picture
+
+The libraries first (`fritzing_search`, `wokwi_search`), then a drawing from
+evidence: the rules are in [part-image.md](part-image.md), which the
+`image_skill()` tool returns. A drawing marks each of the block's pins once
+with `data-pin`, and `image_draw` refuses one that does not.
+
 ## Files
 
 A file the person drops (on the Files tab, or on the chat with 📎) is kept in

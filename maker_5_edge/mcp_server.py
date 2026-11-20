@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import argparse
 import urllib.parse
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from mcp.server.mcpserver import MCPServer
 
@@ -48,6 +48,7 @@ server = MCPServer(
         "only): boxes(), box(). A BOM in Markdown: import_bom(). Hardware "
         "wiring: canvas(), place(), set_pins(), wire(); remove a wire with remove(). "
         "Fritzing parts: fritzing_search(), fritzing_part(), fritzing_use(). "
+        "A block's picture: image_skill() first, then wokwi_search(), image_use(), image_draw(). "
         "Code on GitHub: repo_status(), repo_files(), repo_read(), repo_write(), repo_push(), "
         "repo_incoming(), repo_take_incoming(). On boards: deploy_targets(), deploy()."
     ),)
@@ -340,6 +341,55 @@ def repo_push(product: str, message: str) -> dict:
     is checked for secrets and e-mail addresses, committed with this message
     and pushed with the person's GitHub login."""
     return act(f"Push to GitHub: {message[:80]}", "POST", _p(product) + "/repo/push", {"message": message})
+
+
+@server.tool()
+def image_skill() -> str:
+    """How to give a block its picture: the libraries first, then a drawing
+    from evidence, with the rules image_draw checks. Read it before image_use
+    or image_draw."""
+    from pathlib import Path
+    return (Path(__file__).with_name("skill") / "part-image.md").read_text(encoding="utf-8")
+
+
+@server.tool()
+def wokwi_search(q: str) -> list:
+    """Breadboard pictures of common boards and parts (the Wokwi elements,
+    MIT): [{name, title, pins}], best matches first."""
+    return _get("/api/wokwi/search?" + urllib.parse.urlencode({"q": q}))
+
+
+@server.tool()
+def wokwi_part(name: str) -> dict:
+    """One Wokwi element: its title, licence and pins [{n, name, role, x, y}]
+    (x and y as fractions of the picture)."""
+    return _get("/api/wokwi/part?" + urllib.parse.urlencode({"name": name}))
+
+
+@server.tool()
+def image_use(product: str, block: str, kind: str, ref: str = "") -> dict:
+    """Propose a block's picture: kind fritzing (ref: the part's path), wokwi
+    (ref: the element's name), drawn (from its pins) or none. A library part
+    brings its pins; the board's ports stay."""
+    return act(f"Give {block} a picture ({kind}{' ' + ref if ref else ''})", "POST", _p(product) + "/canvas/image",
+               {"block": block, "kind": kind, "ref": ref})
+
+
+@server.tool()
+def image_draw(product: str, block: str, svg: str) -> dict:
+    """Propose your SVG drawing of a block. It must follow image_skill()'s
+    rules: shapes and text only, a viewBox, each of the block's pins marked
+    once with data-pin="<n>". A refusal says what to fix."""
+    from . import drawing
+    pins = next((b["pins"] for b in _get(_p(product) + "/canvas")["blocks"] if b["id"] == block), None)
+    if pins is None:
+        return {"errors": [f"no block {block}"]}
+    try:
+        drawing.clean(svg, pins)                                  # refused here, before it is proposed
+    except drawing.DrawingError as e:
+        return {"errors": [str(e)]}
+    return act(f"Draw {block} ({len(svg)} characters of SVG)", "POST", _p(product) + "/canvas/image",
+               {"block": block, "kind": "agent", "svg": svg})
 
 
 @server.tool()

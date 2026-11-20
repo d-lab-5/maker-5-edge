@@ -50,10 +50,21 @@ blocks with their supply (there, in hand, to buy), software modules with
 their versions, and, after a preview, the articles the stock lacks, proposed
 in the cloud for an admin to accept on Materials. The **Hardware** tab is the
 canvas: place the blocks, which get the pins of their part
-(`maker_5_edge/parts/library.json`), and click two pins to wire them. A block can take a part of the Fritzing parts library (**Fritzing** beside
-it): its real pins and its breadboard picture, fetched from GitHub when you
-pick it and kept in `mymaker5docs/fritzing/`. The library is CC BY-SA 3.0, so
-it is never part of this repository, and the canvas credits it. Pins,
+(`maker_5_edge/parts/library.json`, with a board's USB, video, audio,
+Ethernet and power ports), and click two pins to wire them. **Image** beside
+a block gives it a picture (ADR-0021):
+- **Fritzing:** a part of the Fritzing parts library, with its real pins,
+  fetched from GitHub when you pick it and kept in `mymaker5docs/fritzing/`.
+  The library is CC BY-SA 3.0, so it is never part of this repository, and
+  the canvas credits it.
+- **Wokwi:** breadboard pictures of common boards and parts from the Wokwi
+  elements (MIT), shipped in `maker_5_edge/parts/wokwi/` and made with
+  `scripts/wokwi-snapshot.mjs`, so nothing is fetched.
+- **From its pins:** a plain drawing of the block's own pins.
+- **By the agent:** the chat draws it as SVG with the `part-image` skill
+  (`maker_5_edge/skill/part-image.md`); each pin is checked before it is kept.
+
+A library part brings its pins; a board's ports stay. Pins,
 wires and positions are in the model, so they sync and the chat can read and
 propose them (ADR-0014 in maker-5-shared).
 

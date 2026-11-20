@@ -85,7 +85,7 @@ CHAT_ALLOWED: List[Tuple[str, str]] = [
     ("DELETE", r"/api/products/[a-z][a-z0-9-]{0,39}/items/(b|m|i|pr|w)-[a-z0-9]{8}"),
     # a BOM into the model, and the hardware canvas (ADR-0014 in maker-5-shared)
     ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/import/bom/apply"),
-    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/canvas/(place|pins|fritzing)"),
+    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/canvas/(place|pins|fritzing|image)"),
     ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/wires(/w-[a-z0-9]{8})?"),
     ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/items/(b|m)-[a-z0-9]{8}/article"),
     # parts from the workspace's stock (ADR-0010 in maker-5-shared)
@@ -175,6 +175,9 @@ When a piece of work is
 done, propose repo_push(message): the person sees the diff and confirms.
 The repository is public: never write a secret, a password, a token, a
 private address or a person's e-mail into it.
+Before giving a block a picture, call image_skill(): it says how (the
+Fritzing and Wokwi libraries first, then a drawing of your own as SVG, with
+each pin marked) and what image_draw() checks.
 A part of the Fritzing parts library gives a block its real pinout:
 fritzing_search() finds parts by words of their name ("PC817", "Raspberry Pi
 B rev2"), fritzing_part() shows one's pins, fritzing_use() proposes it for a

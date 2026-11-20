@@ -233,3 +233,20 @@ def test_the_pin_map_follows_the_wiring_and_the_code_is_checked(ws):
 
 def test_gpio_numbers_from_pin_names():
     assert [gr._gpio(n) for n in ("GPIO17", "GPIO 17", "GPIO 14/TXD", "IO5", "D4", "GND")] == [17, 17, 14, 5, None, None]
+
+
+def test_pictures_go_to_hardware_images_and_are_credited(ws):
+    P, p = ws["P"], ws["p"]
+    blocks = {b["name"]: b["id"] for b in P.model(p)["blocks"]}
+    opto = blocks["Example opto"]
+    P.use_image(p, opto, "drawn")
+    gr.link(P, p)
+    d = gr.repo_dir(P, p)
+    assert (d / "hardware" / "images" / f"{opto}.svg").read_bytes().startswith(b"<svg")
+    assert "drawn for this design" in (d / "NOTICE").read_text() and "Example opto" in (d / "NOTICE").read_text()
+    led = P.add_block(p, "Spare LED")["id"]
+    P.use_image(p, led, "wokwi", "led", [{"n": 1, "name": "A", "role": "signal"}, {"n": 2, "name": "C", "role": "signal"}])
+    gr.prepare(P, p)
+    notice = (d / "NOTICE").read_text()
+    assert "Wokwi elements" in notice and "LED (led)" in notice and "MIT" in notice
+    assert (d / "hardware" / "images" / f"{led}.svg").exists()

@@ -30,10 +30,11 @@
 
   /** Which side and row a pin sits on: a long header odd left and even right,
    *  as it is on the board; a small part its first half left. */
-  const IMG = 110;                                  // room for a Fritzing part's picture
+  const IMG = 110;                                  // room for a block's picture
+  const hasImage = (b) => !!b.fritzing || (b.image && b.image.kind !== "none");
   function layout(b) {
     const pins = b.pins;
-    const w = b.fritzing ? W + IMG : W;
+    const w = hasImage(b) ? W + IMG : W;
     const header = pins.length >= 20;
     const left = [], right = [];
     pins.forEach((p, i) => ((header ? p.n % 2 === 1 : i < Math.ceil(pins.length / 2)) ? left : right).push(p));
@@ -41,7 +42,7 @@
     const at = {};
     left.forEach((p, i) => { at[p.id] = { x: 0, y: HEAD + PAD + i * ROW + ROW / 2, side: -1 }; });
     right.forEach((p, i) => { at[p.id] = { x: w, y: HEAD + PAD + i * ROW + ROW / 2, side: 1 }; });
-    return { at, w, h: Math.max(HEAD + PAD * 2 + rows * ROW, b.fritzing ? HEAD + IMG + PAD * 2 : 0) };
+    return { at, w, h: Math.max(HEAD + PAD * 2 + rows * ROW, hasImage(b) ? HEAD + IMG + PAD * 2 : 0) };
   }
 
   async function api(method, path, payload) {
@@ -82,11 +83,13 @@
             <button data-place="${esc(b.id)}" data-help="help.hw.place">${esc(t("hw.place"))}</button></li>`).join("")}</ul>`
             : `<p class="note">${esc(data.blocks.length ? t("hw.allPlaced") : t("hw.noBlocks"))}</p>`}
           ${placed.length ? `<h3>${esc(t("hw.placed"))}</h3><ul>${placed.map((b) => `<li><span>${esc(b.name)}</span>
-            <span><button data-fz="${esc(b.id)}" data-help="help.hw.fritzing">${esc(t("hw.fritzing"))}</button>
+            <span><button data-fz="${esc(b.id)}" data-help="help.hw.image">${esc(t("hw.image"))}</button>
             <button data-pins="${esc(b.id)}" data-help="help.hw.pins">${esc(t("hw.pins"))}</button></span></li>`).join("")}</ul>` : ""}
           <p class="note">${esc(t("hw.wires", { n: data.wires.length }))}</p>
           ${data.blocks.some((b) => b.fritzing) ? `<p class="note hw-credit">${esc(t("hw.fzCredit"))}
             <a href="https://github.com/fritzing/fritzing-parts" target="_blank" rel="noreferrer">fritzing-parts</a>, CC BY-SA 3.0</p>` : ""}
+          ${data.blocks.some((b) => b.image && b.image.kind === "wokwi") ? `<p class="note hw-credit">${esc(t("hw.wkCredit"))}
+            <a href="https://github.com/wokwi/wokwi-elements" target="_blank" rel="noreferrer">wokwi-elements</a>, MIT</p>` : ""}
         </aside>
         <div class="hw-stage"></div>
       </div>`;
@@ -129,11 +132,12 @@
       const part = el("g", { class: `hw-part${b.supply === "to-buy" ? " to-buy" : ""}`, transform: `translate(${b.x},${b.y})`, "data-block": b.id }, partsG);
       el("rect", { width: g.w, height: g.h, rx: 6, class: "hw-body" }, part);
       el("rect", { width: g.w, height: HEAD, rx: 6, class: "hw-head" }, part);
-      if (b.fritzing) {
-        // the part's breadboard picture, between its pin columns; an <image> runs nothing
+      const pic = picture(b);
+      if (pic) {
+        // the block's picture, between its pin columns; an <image> runs nothing
         const img = el("image", { x: (g.w - IMG) / 2, y: HEAD + PAD, width: IMG, height: g.h - HEAD - PAD * 2,
-          href: `/api/fritzing/image?path=${encodeURIComponent(b.fritzing)}`, preserveAspectRatio: "xMidYMid meet", class: "hw-img" }, part);
-        el("title", {}, img).textContent = `${t("hw.fzFrom")} ${b.fritzing} (CC BY-SA 3.0)`;
+          href: pic.href, preserveAspectRatio: "xMidYMid meet", class: "hw-img" }, part);
+        el("title", {}, img).textContent = pic.credit;
       }
       const title = el("text", { x: 10, y: 18, class: "hw-name" }, part);
       title.textContent = b.name.length > 26 ? b.name.slice(0, 25) + "…" : b.name;
@@ -260,7 +264,7 @@
       if (await api("POST", `${C.base}/canvas/place`, { block: b.dataset.place, x, y })) await reload();
     });
     box.querySelectorAll("[data-pins]").forEach((b) => b.onclick = () => pinsDialog(data.blocks.find((x) => x.id === b.dataset.pins)));
-    box.querySelectorAll("[data-fz]").forEach((b) => b.onclick = () => fritzingDialog(data.blocks.find((x) => x.id === b.dataset.fz)));
+    box.querySelectorAll("[data-fz]").forEach((b) => b.onclick = () => imageDialog(data.blocks.find((x) => x.id === b.dataset.fz)));
   }
 
   function wireDialog(w) {
@@ -309,58 +313,122 @@
     });
   }
 
-  /** A part of the Fritzing library for a block: search by name, look at
-   *  its pins and picture, use it (fritzing.py fetches only what is picked). */
-  function fritzingDialog(b, q) {
+  /** Where a block's picture is served from, and its credit (ADR-0021). */
+  function picture(b) {
+    const kind = b.image ? b.image.kind : (b.fritzing ? "fritzing" : "none");
+    const ref = b.image ? b.image.ref : b.fritzing;
+    const own = `${C.base}/blocks/${encodeURIComponent(b.id)}/image.svg?v=${encodeURIComponent(kind === "drawn" ? b.pins.map((x) => x.n + x.name + x.role).join("|").length + "-" + b.pins.length : ref || "")}`;
+    if (kind === "fritzing") return { href: `/api/fritzing/image?path=${encodeURIComponent(ref)}`, credit: `${t("hw.fzFrom")} ${ref} (CC BY-SA 3.0)` };
+    if (kind === "wokwi") return { href: `/api/wokwi/image?name=${encodeURIComponent(ref)}`, credit: `${t("hw.wkFrom")} ${ref} (MIT)` };
+    if (kind === "drawn") return { href: own, credit: t("hw.drawnFrom") };
+    if (kind === "agent") return { href: own, credit: t("hw.agentFrom") };
+    return null;
+  }
+
+  /** The libraries the Image window searches: the same view for each. */
+  const LIBS = {
+    fritzing: { search: (q, b) => `/api/fritzing/search?q=${encodeURIComponent(q)}&for=${encodeURIComponent(b.name)}`,
+      part: (k) => `/api/fritzing/part?path=${encodeURIComponent(k)}`, image: (k) => `/api/fritzing/image?path=${encodeURIComponent(k)}`,
+      key: (h) => h.path, label: (h) => h.name, sub: (h) => h.folder, hint: "hw.fzHint",
+      about: (p) => `${esc(p.author)} · ${esc(p.license)} · <a href="${esc(p.source)}" target="_blank" rel="noreferrer">${esc(p.path)}</a>` },
+    wokwi: { search: (q) => `/api/wokwi/search?q=${encodeURIComponent(q)}`,
+      part: (k) => `/api/wokwi/part?name=${encodeURIComponent(k)}`, image: (k) => `/api/wokwi/image?name=${encodeURIComponent(k)}`,
+      key: (h) => h.name, label: (h) => h.title, sub: (h) => t("hw.fzPins", { n: h.pins }), hint: "hw.wkHint",
+      about: (p) => `Wokwi elements ${esc(p.version)} · ${esc(p.license)} · <a href="${esc(p.source)}" target="_blank" rel="noreferrer">${esc(p.name)}</a>` },
+  };
+
+  /** A block's picture: from Fritzing, from Wokwi, drawn from its pins, by
+   *  the agent, or none. A library part brings its pins (and the board's ports). */
+  function imageDialog(b, tab) {
     if (!b) return;
-    const words = q ?? b.name.replace(/\(.*?\)/g, " ").replace(/[,;].*$/, "").split(/\s+/).filter(Boolean).slice(0, 6).join(" ");
-    core.dialog(t("hw.fzFor", { name: b.name }), `
-      <p class="note">${esc(t("hw.fzHint"))}</p>
-      <label><input name="q" value="${esc(words)}" placeholder="${esc(t("hw.fzSearch"))}"></label>
-      <div class="fz-results"><p class="note">…</p></div>
-      <div class="fz-pick"></div>
+    const now = b.image ? b.image.kind : (b.fritzing ? "fritzing" : "none");
+    tab = tab || (now === "none" ? "fritzing" : now);
+    const tabs = ["fritzing", "wokwi", "drawn", "agent", "none"];
+    const words = b.name.replace(/\(.*?\)/g, " ").replace(/[,;].*$/, "").split(/\s+/).filter(Boolean).slice(0, 6).join(" ");
+    core.dialog(t("hw.imageFor", { name: b.name }), `
+      <div class="img-tabs" role="tablist">${tabs.map((k) => `<button type="button" role="tab" data-tab="${k}" class="${k === tab ? "is-on" : ""}"
+        aria-selected="${k === tab}">${esc(t(`hw.img.${k}`))}${k === now ? " ✓" : ""}</button>`).join("")}</div>
+      <div class="img-body"></div>
       <div class="actions"><button value="cancel" formnovalidate>${esc(t("model.cancel"))}</button>
-        <button value="search">${esc(t("hw.fzFind"))}</button>
+        <button value="search" class="img-find">${esc(t("hw.fzFind"))}</button>
         <button value="ok" class="primary" disabled>${esc(t("hw.fzUse"))}</button></div>`, (form, dlg) => {
       let chosen = null;
-      const results = form.querySelector(".fz-results"), pick = form.querySelector(".fz-pick");
-      const useBtn = form.querySelector('button[value="ok"]');
-      const find = async () => {
-        results.innerHTML = `<p class="note">…</p>`;
-        try {
-          const hits = await core.api("GET", `/api/fritzing/search?q=${encodeURIComponent(form.querySelector('[name="q"]').value)}&for=${encodeURIComponent(b.name)}`);
-          results.innerHTML = hits.length ? `<ul>${hits.map((h) => `<li><button type="button" class="linkish" data-path="${esc(h.path)}">${esc(h.name)}</button>
-            <small class="note">${esc(h.folder)}</small>${h.suggested ? ` <span class="pill">${esc(t("hw.fzSuggested"))}</span>` : ""}</li>`).join("")}</ul>` : `<p class="note">${esc(t("hw.fzNone"))}</p>`;
-          results.querySelectorAll("[data-path]").forEach((x) => x.onclick = () => show(x.dataset.path));
-        } catch (err) { results.innerHTML = `<p class="note warn">${esc(failed(err))}</p>`; }
+      const body = form.querySelector(".img-body"), useBtn = form.querySelector('button[value="ok"]'), findBtn = form.querySelector(".img-find");
+      const library = (lib) => {
+        const L = LIBS[lib];
+        body.innerHTML = `<p class="note">${esc(t(L.hint))}</p>
+          <label><input name="q" value="${esc(words)}" placeholder="${esc(t("hw.fzSearch"))}"></label>
+          <div class="fz-results"><p class="note">…</p></div><div class="fz-pick"></div>`;
+        const results = body.querySelector(".fz-results"), pick = body.querySelector(".fz-pick");
+        const show = async (key) => {
+          pick.innerHTML = `<p class="note">…</p>`;
+          try {
+            const p = await core.api("GET", L.part(key));
+            chosen = { kind: lib, ref: key, title: p.title };
+            useBtn.disabled = false;
+            pick.innerHTML = `<div class="fz-part"><img src="${L.image(key)}" alt="">
+              <div><strong>${esc(p.title)}</strong><br><small class="note">${L.about(p)}</small>
+                <p class="note">${esc(t("hw.fzPins", { n: p.pins.length }))}: ${p.pins.map((x) => esc(x.name)).join(", ")}</p></div></div>`;
+          } catch (err) { pick.innerHTML = `<p class="note warn">${esc(failed(err))}</p>`; }
+        };
+        const find = async () => {
+          results.innerHTML = `<p class="note">…</p>`;
+          try {
+            const hits = await core.api("GET", L.search(body.querySelector('[name="q"]').value, b));
+            results.innerHTML = hits.length ? `<ul>${hits.map((h) => `<li><button type="button" class="linkish" data-key="${esc(L.key(h))}">${esc(L.label(h))}</button>
+              <small class="note">${esc(L.sub(h))}</small>${h.suggested ? ` <span class="pill">${esc(t("hw.fzSuggested"))}</span>` : ""}</li>`).join("")}</ul>`
+              : `<p class="note">${esc(t("hw.fzNone"))}</p>`;
+            results.querySelectorAll("[data-key]").forEach((x) => x.onclick = () => show(x.dataset.key));
+          } catch (err) { results.innerHTML = `<p class="note warn">${esc(failed(err))}</p>`; }
+        };
+        body.find = find;
+        find();
       };
-      const show = async (path) => {
-        pick.innerHTML = `<p class="note">…</p>`;
-        try {
-          const p = await core.api("GET", `/api/fritzing/part?path=${encodeURIComponent(path)}`);
-          chosen = p;
-          useBtn.disabled = false;
-          pick.innerHTML = `<div class="fz-part">
-            <img src="/api/fritzing/image?path=${encodeURIComponent(p.path)}" alt="">
-            <div><strong>${esc(p.title)}</strong><br><small class="note">${esc(p.author)} · ${esc(p.license)} ·
-              <a href="${esc(p.source)}" target="_blank" rel="noreferrer">${esc(p.path)}</a></small>
-              <p class="note">${esc(t("hw.fzPins", { n: p.pins.length }))}: ${p.pins.map((x) => esc(x.name)).join(", ")}</p></div></div>`;
-        } catch (err) { pick.innerHTML = `<p class="note warn">${esc(failed(err))}</p>`; }
+      const open = (k) => {
+        tab = k; chosen = null; useBtn.disabled = true; findBtn.hidden = !LIBS[k]; body.find = null;
+        form.querySelectorAll("[data-tab]").forEach((x) => { x.classList.toggle("is-on", x.dataset.tab === k); x.setAttribute("aria-selected", x.dataset.tab === k); });
+        useBtn.textContent = t(k === "agent" ? "hw.agentAsk" : k === "none" ? "hw.imgRemove" : "hw.fzUse");
+        if (LIBS[k]) return library(k);
+        if (k === "drawn") {
+          body.innerHTML = `<p class="note">${esc(t("hw.drawnHint"))}</p>
+            <div class="fz-part"><img class="img-preview" src="${C.base}/blocks/${encodeURIComponent(b.id)}/image.svg?drawn=1&v=${Date.now()}" alt=""></div>`;
+          chosen = { kind: "drawn" }; useBtn.disabled = now === "drawn";
+        } else if (k === "agent") {
+          body.innerHTML = `<p class="note">${esc(t("hw.agentHint"))}</p>
+            ${now === "agent" ? `<div class="fz-part"><img class="img-preview" src="${C.base}/blocks/${encodeURIComponent(b.id)}/image.svg?v=${Date.now()}" alt=""></div>` : ""}`;
+          chosen = { kind: "agent" }; useBtn.disabled = false;
+        } else {
+          body.innerHTML = `<p class="note">${esc(t("hw.noneHint"))}</p>`;
+          chosen = { kind: "none" }; useBtn.disabled = now === "none";
+        }
       };
+      form.querySelectorAll("[data-tab]").forEach((x) => x.onclick = () => open(x.dataset.tab));
       form.onsubmit = async (ev) => {
         const v = ev.submitter && ev.submitter.value;
         if (v === "cancel") { form.onsubmit = null; return; }
         ev.preventDefault();
-        if (v === "search" || !chosen) { find(); return; }
+        if (v === "search" || !chosen) { if (body.find) body.find(); return; }
         form.onsubmit = null;
         dlg.close();
-        if (await api("POST", `${C.base}/canvas/fritzing`, { block: b.id, path: chosen.path })) {
-          core.toast(t("hw.fzUsed", { title: chosen.title }));
+        if (chosen.kind === "agent") return askAgent(b);
+        if (await api("POST", `${C.base}/canvas/image`, { block: b.id, kind: chosen.kind, ref: chosen.ref || "" })) {
+          core.toast(chosen.title ? t("hw.fzUsed", { title: chosen.title }) : t(`hw.imgSet.${chosen.kind}`));
           await reload();
         }
       };
-      find();
+      open(tab);
     });
+  }
+
+  /** The agent draws: its request is written into the chat box; the person adds to it and asks. */
+  function askAgent(b) {
+    const box = document.getElementById("edge-chat");
+    const input = box && box.querySelector(".edge-chat__ask textarea");
+    if (!input) { core.toast(t("hw.agentNoChat")); return; }
+    input.value = t("hw.agentRequest", { name: b.name, n: b.pins.length });
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
   }
 
   // the label of the full-screen button follows the state (Esc leaves too)

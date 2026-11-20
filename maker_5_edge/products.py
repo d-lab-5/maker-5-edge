@@ -77,6 +77,7 @@ PIN_ROLES = {"power": M5.PinPower, "ground": M5.PinGround, "signal": M5.PinSigna
 SUPPLY = {"there": M5.SupplyThere, "in-hand": M5.SupplyInHand, "to-buy": M5.SupplyToBuy}
 COLOR = re.compile(r"^(#[0-9a-fA-F]{6}|[a-z]{3,20})$")
 MAX_PINS = 80
+IMAGE_KINDS = ("fritzing", "wokwi", "drawn", "agent", "none")
 
 
 class NotFound(LookupError):
@@ -174,6 +175,21 @@ def _mint(prefix: str) -> str:
 
 def _iri(kind: str, ident: str) -> URIRef:
     return URIRef(f"{ID}{kind}/{ident}")
+
+
+def _image_of(g: Graph, b: URIRef) -> Dict[str, str]:
+    """Where a block's picture comes from: {kind, ref} (ADR-0021)."""
+    if g.value(b, M5.fritzingPart) is not None:
+        return {"kind": "fritzing", "ref": str(g.value(b, M5.fritzingPart))}
+    img = str(g.value(b, M5.partImage) or "")
+    if img.startswith("wokwi:"):
+        return {"kind": "wokwi", "ref": img[6:]}
+    if img == "drawn":
+        return {"kind": "drawn", "ref": ""}
+    if g.value(b, M5.partDrawing) is not None:
+        import hashlib  # the ref tells one drawing from the next, so the page reloads it
+        return {"kind": "agent", "ref": hashlib.sha1(str(g.value(b, M5.partDrawing)).encode()).hexdigest()[:10]}
+    return {"kind": "none", "ref": ""}
 
 
 def _local(iri: Any) -> str:
@@ -446,6 +462,11 @@ class Products:
     def _pin_iri(block: str, number: int) -> URIRef:
         return _iri("pin", f"{block}.{number}")
 
+    def drawing(self, p: str, block: str) -> str:
+        """The agent's SVG of a block (m5:partDrawing), or ""."""
+        g = self._exists(p)
+        return str(g.value(self._find(g, block, "block"), M5.partDrawing) or "")
+
     def canvas(self, p: str) -> Dict:
         """The blocks with their place and pins, and the wires between pins."""
         g = self._exists(p)
@@ -468,7 +489,7 @@ class Products:
                            "x": None if x is None else int(x), "y": None if y is None else int(y),
                            "supply": next((k for k, v in SUPPLY.items() if v == supply), ""),
                            "article": _local(a) if a is not None else "", "pins": pins(b),
-                           "fritzing": str(g.value(b, M5.fritzingPart) or "")})
+                           "fritzing": str(g.value(b, M5.fritzingPart) or ""), "image": _image_of(g, b)})
         wires = []
         for w in sorted(set(g.subjects(RDF.type, M5.Wire)), key=str):
             ends = sorted(g.objects(w, M5.wireEnd), key=str)
@@ -516,13 +537,35 @@ class Products:
     def use_part(self, p: str, block: str, path: str, pins: List[Dict[str, Any]]) -> Dict:
         """A block takes a Fritzing part (fritzing.py; ADR-0016): its pins, and
         the part's file name in m5:fritzingPart, in one revision."""
-        clean = self._clean_pins(pins)
+        got = self.use_image(p, block, "fritzing", path, pins)
+        return {"id": block, "pins": got["pins"], "fritzing": path}
+
+    def use_image(self, p: str, block: str, kind: str, ref: str = "", pins: Optional[List[Dict[str, Any]]] = None,
+                  svg: str = "") -> Dict:
+        """A block's picture (ADR-0021), from one source at a time:
+        fritzing (a part's file), wokwi (an element), drawn (from its pins),
+        agent (an SVG drawn by the agent, checked by drawing.clean), or none.
+        A library part brings its pins too, in the same revision."""
+        if kind not in IMAGE_KINDS:
+            raise ValueError(f"a picture comes from {', '.join(IMAGE_KINDS)}")
+        clean = self._clean_pins(pins) if pins is not None else None
 
         def apply(g: Graph) -> None:
-            self._apply_pins(g, block, clean)
-            g.set((self._find(g, block, "block"), M5.fritzingPart, Literal(path)))
+            b = self._find(g, block, "block")
+            if clean is not None:
+                self._apply_pins(g, block, clean)
+            for prop in (M5.fritzingPart, M5.partImage, M5.partDrawing):
+                g.remove((b, prop, None))
+            if kind == "fritzing":
+                g.add((b, M5.fritzingPart, Literal(ref)))
+            elif kind == "wokwi":
+                g.add((b, M5.partImage, Literal(f"wokwi:{ref}")))
+            elif kind == "drawn":
+                g.add((b, M5.partImage, Literal("drawn")))
+            elif kind == "agent":
+                g.add((b, M5.partDrawing, Literal(svg)))
         self._change(p, apply)
-        return {"id": block, "pins": len(clean), "fritzing": path}
+        return {"id": block, "image": kind, "ref": ref, "pins": len(clean) if clean is not None else None}
 
     @staticmethod
     def _clean_pins(pins: List[Dict[str, Any]]) -> Dict[int, Dict[str, Any]]:

@@ -1,0 +1,3619 @@
+{
+ "version": "1.9.2",
+ "license": "MIT",
+ "source": "https://github.com/wokwi/wokwi-elements",
+ "copyright": "Copyright (c) 2020 Uri Shaked",
+ "parts": [
+  {
+   "name": "7segment",
+   "title": "7segment",
+   "width": 47,
+   "height": 83,
+   "pins": [
+    {
+     "n": 1,
+     "name": "COM.1",
+     "role": "signal",
+     "x": 0.5,
+     "y": 0.864
+    },
+    {
+     "n": 2,
+     "name": "COM.2",
+     "role": "signal",
+     "x": 0.5,
+     "y": 0.045
+    },
+    {
+     "n": 3,
+     "name": "A",
+     "role": "signal",
+     "x": 0.702,
+     "y": 0.045
+    },
+    {
+     "n": 4,
+     "name": "B",
+     "role": "signal",
+     "x": 0.905,
+     "y": 0.045
+    },
+    {
+     "n": 5,
+     "name": "C",
+     "role": "signal",
+     "x": 0.702,
+     "y": 0.864
+    },
+    {
+     "n": 6,
+     "name": "D",
+     "role": "signal",
+     "x": 0.298,
+     "y": 0.864
+    },
+    {
+     "n": 7,
+     "name": "E",
+     "role": "signal",
+     "x": 0.095,
+     "y": 0.864
+    },
+    {
+     "n": 8,
+     "name": "F",
+     "role": "signal",
+     "x": 0.298,
+     "y": 0.045
+    },
+    {
+     "n": 9,
+     "name": "G",
+     "role": "signal",
+     "x": 0.095,
+     "y": 0.045
+    },
+    {
+     "n": 10,
+     "name": "DP",
+     "role": "signal",
+     "x": 0.905,
+     "y": 0.864
+    }
+   ]
+  },
+  {
+   "name": "analog-joystick",
+   "title": "Analog Joystick",
+   "width": 103,
+   "height": 120,
+   "pins": [
+    {
+     "n": 1,
+     "name": "VCC",
+     "role": "power",
+     "x": 0.321,
+     "y": 0.963
+    },
+    {
+     "n": 2,
+     "name": "VERT",
+     "role": "signal",
+     "x": 0.414,
+     "y": 0.963
+    },
+    {
+     "n": 3,
+     "name": "HORZ",
+     "role": "signal",
+     "x": 0.508,
+     "y": 0.963
+    },
+    {
+     "n": 4,
+     "name": "SEL",
+     "role": "signal",
+     "x": 0.601,
+     "y": 0.963
+    },
+    {
+     "n": 5,
+     "name": "GND",
+     "role": "ground",
+     "x": 0.695,
+     "y": 0.963
+    }
+   ]
+  },
+  {
+   "name": "arduino-mega",
+   "title": "Arduino Mega",
+   "width": 388,
+   "height": 192,
+   "pins": [
+    {
+     "n": 1,
+     "name": "SCL",
+     "role": "data",
+     "x": 0.232,
+     "y": 0.047
+    },
+    {
+     "n": 2,
+     "name": "SDA",
+     "role": "data",
+     "x": 0.258,
+     "y": 0.047
+    },
+    {
+     "n": 3,
+     "name": "AREF",
+     "role": "signal",
+     "x": 0.281,
+     "y": 0.047
+    },
+    {
+     "n": 4,
+     "name": "GND.1",
+     "role": "ground",
+     "x": 0.307,
+     "y": 0.047
+    },
+    {
+     "n": 5,
+     "name": "13",
+     "role": "signal",
+     "x": 0.332,
+     "y": 0.047
+    },
+    {
+     "n": 6,
+     "name": "12",
+     "role": "signal",
+     "x": 0.356,
+     "y": 0.047
+    },
+    {
+     "n": 7,
+     "name": "11",
+     "role": "signal",
+     "x": 0.381,
+     "y": 0.047
+    },
+    {
+     "n": 8,
+     "name": "10",
+     "role": "signal",
+     "x": 0.406,
+     "y": 0.047
+    },
+    {
+     "n": 9,
+     "name": "9",
+     "role": "signal",
+     "x": 0.432,
+     "y": 0.047
+    },
+    {
+     "n": 10,
+     "name": "8",
+     "role": "signal",
+     "x": 0.456,
+     "y": 0.047
+    },
+    {
+     "n": 11,
+     "name": "7",
+     "role": "signal",
+     "x": 0.49,
+     "y": 0.047
+    },
+    {
+     "n": 12,
+     "name": "6",
+     "role": "signal",
+     "x": 0.515,
+     "y": 0.047
+    },
+    {
+     "n": 13,
+     "name": "5",
+     "role": "signal",
+     "x": 0.54,
+     "y": 0.047
+    },
+    {
+     "n": 14,
+     "name": "4",
+     "role": "signal",
+     "x": 0.564,
+     "y": 0.047
+    },
+    {
+     "n": 15,
+     "name": "3",
+     "role": "signal",
+     "x": 0.589,
+     "y": 0.047
+    },
+    {
+     "n": 16,
+     "name": "2",
+     "role": "signal",
+     "x": 0.613,
+     "y": 0.047
+    },
+    {
+     "n": 17,
+     "name": "1",
+     "role": "data",
+     "x": 0.638,
+     "y": 0.047
+    },
+    {
+     "n": 18,
+     "name": "0",
+     "role": "data",
+     "x": 0.664,
+     "y": 0.047
+    },
+    {
+     "n": 19,
+     "name": "14",
+     "role": "data",
+     "x": 0.697,
+     "y": 0.047
+    },
+    {
+     "n": 20,
+     "name": "15",
+     "role": "data",
+     "x": 0.722,
+     "y": 0.047
+    },
+    {
+     "n": 21,
+     "name": "16",
+     "role": "data",
+     "x": 0.746,
+     "y": 0.047
+    },
+    {
+     "n": 22,
+     "name": "17",
+     "role": "data",
+     "x": 0.771,
+     "y": 0.047
+    },
+    {
+     "n": 23,
+     "name": "18",
+     "role": "data",
+     "x": 0.795,
+     "y": 0.047
+    },
+    {
+     "n": 24,
+     "name": "19",
+     "role": "data",
+     "x": 0.821,
+     "y": 0.047
+    },
+    {
+     "n": 25,
+     "name": "20",
+     "role": "data",
+     "x": 0.845,
+     "y": 0.047
+    },
+    {
+     "n": 26,
+     "name": "21",
+     "role": "data",
+     "x": 0.87,
+     "y": 0.047
+    },
+    {
+     "n": 27,
+     "name": "5V.1",
+     "role": "power",
+     "x": 0.93,
+     "y": 0.042
+    },
+    {
+     "n": 28,
+     "name": "5V.2",
+     "role": "power",
+     "x": 0.956,
+     "y": 0.042
+    },
+    {
+     "n": 29,
+     "name": "22",
+     "role": "signal",
+     "x": 0.93,
+     "y": 0.091
+    },
+    {
+     "n": 30,
+     "name": "23",
+     "role": "signal",
+     "x": 0.956,
+     "y": 0.091
+    },
+    {
+     "n": 31,
+     "name": "24",
+     "role": "signal",
+     "x": 0.93,
+     "y": 0.142
+    },
+    {
+     "n": 32,
+     "name": "25",
+     "role": "signal",
+     "x": 0.956,
+     "y": 0.142
+    },
+    {
+     "n": 33,
+     "name": "26",
+     "role": "signal",
+     "x": 0.93,
+     "y": 0.191
+    },
+    {
+     "n": 34,
+     "name": "27",
+     "role": "signal",
+     "x": 0.956,
+     "y": 0.191
+    },
+    {
+     "n": 35,
+     "name": "28",
+     "role": "signal",
+     "x": 0.93,
+     "y": 0.241
+    },
+    {
+     "n": 36,
+     "name": "29",
+     "role": "signal",
+     "x": 0.956,
+     "y": 0.241
+    },
+    {
+     "n": 37,
+     "name": "30",
+     "role": "signal",
+     "x": 0.93,
+     "y": 0.292
+    },
+    {
+     "n": 38,
+     "name": "31",
+     "role": "signal",
+     "x": 0.956,
+     "y": 0.292
+    },
+    {
+     "n": 39,
+     "name": "32",
+     "role": "signal",
+     "x": 0.93,
+     "y": 0.341
+    },
+    {
+     "n": 40,
+     "name": "33",
+     "role": "signal",
+     "x": 0.956,
+     "y": 0.341
+    },
+    {
+     "n": 41,
+     "name": "34",
+     "role": "signal",
+     "x": 0.93,
+     "y": 0.391
+    },
+    {
+     "n": 42,
+     "name": "35",
+     "role": "signal",
+     "x": 0.956,
+     "y": 0.391
+    },
+    {
+     "n": 43,
+     "name": "36",
+     "role": "signal",
+     "x": 0.93,
+     "y": 0.44
+    },
+    {
+     "n": 44,
+     "name": "37",
+     "role": "signal",
+     "x": 0.956,
+     "y": 0.44
+    },
+    {
+     "n": 45,
+     "name": "38",
+     "role": "signal",
+     "x": 0.93,
+     "y": 0.491
+    },
+    {
+     "n": 46,
+     "name": "39",
+     "role": "signal",
+     "x": 0.956,
+     "y": 0.491
+    },
+    {
+     "n": 47,
+     "name": "40",
+     "role": "signal",
+     "x": 0.93,
+     "y": 0.54
+    },
+    {
+     "n": 48,
+     "name": "41",
+     "role": "signal",
+     "x": 0.956,
+     "y": 0.54
+    },
+    {
+     "n": 49,
+     "name": "42",
+     "role": "signal",
+     "x": 0.93,
+     "y": 0.591
+    },
+    {
+     "n": 50,
+     "name": "43",
+     "role": "signal",
+     "x": 0.956,
+     "y": 0.591
+    },
+    {
+     "n": 51,
+     "name": "44",
+     "role": "signal",
+     "x": 0.93,
+     "y": 0.641
+    },
+    {
+     "n": 52,
+     "name": "45",
+     "role": "signal",
+     "x": 0.956,
+     "y": 0.641
+    },
+    {
+     "n": 53,
+     "name": "46",
+     "role": "signal",
+     "x": 0.93,
+     "y": 0.691
+    },
+    {
+     "n": 54,
+     "name": "47",
+     "role": "signal",
+     "x": 0.956,
+     "y": 0.691
+    },
+    {
+     "n": 55,
+     "name": "48",
+     "role": "signal",
+     "x": 0.93,
+     "y": 0.741
+    },
+    {
+     "n": 56,
+     "name": "49",
+     "role": "signal",
+     "x": 0.956,
+     "y": 0.741
+    },
+    {
+     "n": 57,
+     "name": "50",
+     "role": "data",
+     "x": 0.93,
+     "y": 0.792
+    },
+    {
+     "n": 58,
+     "name": "51",
+     "role": "data",
+     "x": 0.956,
+     "y": 0.792
+    },
+    {
+     "n": 59,
+     "name": "52",
+     "role": "data",
+     "x": 0.93,
+     "y": 0.841
+    },
+    {
+     "n": 60,
+     "name": "53",
+     "role": "signal",
+     "x": 0.956,
+     "y": 0.841
+    },
+    {
+     "n": 61,
+     "name": "GND.4",
+     "role": "ground",
+     "x": 0.93,
+     "y": 0.892
+    },
+    {
+     "n": 62,
+     "name": "GND.5",
+     "role": "ground",
+     "x": 0.956,
+     "y": 0.892
+    },
+    {
+     "n": 63,
+     "name": "IOREF",
+     "role": "signal",
+     "x": 0.351,
+     "y": 0.961
+    },
+    {
+     "n": 64,
+     "name": "RESET",
+     "role": "signal",
+     "x": 0.375,
+     "y": 0.961
+    },
+    {
+     "n": 65,
+     "name": "3.3V",
+     "role": "power",
+     "x": 0.399,
+     "y": 0.961
+    },
+    {
+     "n": 66,
+     "name": "5V",
+     "role": "power",
+     "x": 0.424,
+     "y": 0.961
+    },
+    {
+     "n": 67,
+     "name": "GND.2",
+     "role": "ground",
+     "x": 0.449,
+     "y": 0.961
+    },
+    {
+     "n": 68,
+     "name": "GND.3",
+     "role": "ground",
+     "x": 0.474,
+     "y": 0.961
+    },
+    {
+     "n": 69,
+     "name": "VIN",
+     "role": "power",
+     "x": 0.499,
+     "y": 0.961
+    },
+    {
+     "n": 70,
+     "name": "A0",
+     "role": "signal",
+     "x": 0.537,
+     "y": 0.961
+    },
+    {
+     "n": 71,
+     "name": "A1",
+     "role": "signal",
+     "x": 0.562,
+     "y": 0.961
+    },
+    {
+     "n": 72,
+     "name": "A2",
+     "role": "signal",
+     "x": 0.586,
+     "y": 0.961
+    },
+    {
+     "n": 73,
+     "name": "A3",
+     "role": "signal",
+     "x": 0.611,
+     "y": 0.961
+    },
+    {
+     "n": 74,
+     "name": "A4",
+     "role": "signal",
+     "x": 0.636,
+     "y": 0.961
+    },
+    {
+     "n": 75,
+     "name": "A5",
+     "role": "signal",
+     "x": 0.66,
+     "y": 0.961
+    },
+    {
+     "n": 76,
+     "name": "A6",
+     "role": "signal",
+     "x": 0.686,
+     "y": 0.961
+    },
+    {
+     "n": 77,
+     "name": "A7",
+     "role": "signal",
+     "x": 0.71,
+     "y": 0.961
+    },
+    {
+     "n": 78,
+     "name": "A8",
+     "role": "signal",
+     "x": 0.748,
+     "y": 0.961
+    },
+    {
+     "n": 79,
+     "name": "A9",
+     "role": "signal",
+     "x": 0.773,
+     "y": 0.961
+    },
+    {
+     "n": 80,
+     "name": "A10",
+     "role": "signal",
+     "x": 0.798,
+     "y": 0.961
+    },
+    {
+     "n": 81,
+     "name": "A11",
+     "role": "signal",
+     "x": 0.823,
+     "y": 0.961
+    },
+    {
+     "n": 82,
+     "name": "A12",
+     "role": "signal",
+     "x": 0.847,
+     "y": 0.961
+    },
+    {
+     "n": 83,
+     "name": "A13",
+     "role": "signal",
+     "x": 0.872,
+     "y": 0.961
+    },
+    {
+     "n": 84,
+     "name": "A14",
+     "role": "signal",
+     "x": 0.897,
+     "y": 0.961
+    },
+    {
+     "n": 85,
+     "name": "A15",
+     "role": "signal",
+     "x": 0.922,
+     "y": 0.961
+    }
+   ]
+  },
+  {
+   "name": "arduino-nano",
+   "title": "Arduino Nano",
+   "width": 170,
+   "height": 67,
+   "pins": [
+    {
+     "n": 1,
+     "name": "12",
+     "role": "data",
+     "x": 0.116,
+     "y": 0.071
+    },
+    {
+     "n": 2,
+     "name": "11",
+     "role": "data",
+     "x": 0.173,
+     "y": 0.071
+    },
+    {
+     "n": 3,
+     "name": "10",
+     "role": "data",
+     "x": 0.229,
+     "y": 0.071
+    },
+    {
+     "n": 4,
+     "name": "9",
+     "role": "signal",
+     "x": 0.286,
+     "y": 0.071
+    },
+    {
+     "n": 5,
+     "name": "8",
+     "role": "signal",
+     "x": 0.342,
+     "y": 0.071
+    },
+    {
+     "n": 6,
+     "name": "7",
+     "role": "signal",
+     "x": 0.399,
+     "y": 0.071
+    },
+    {
+     "n": 7,
+     "name": "6",
+     "role": "signal",
+     "x": 0.456,
+     "y": 0.071
+    },
+    {
+     "n": 8,
+     "name": "5",
+     "role": "signal",
+     "x": 0.512,
+     "y": 0.071
+    },
+    {
+     "n": 9,
+     "name": "4",
+     "role": "signal",
+     "x": 0.569,
+     "y": 0.071
+    },
+    {
+     "n": 10,
+     "name": "3",
+     "role": "signal",
+     "x": 0.625,
+     "y": 0.071
+    },
+    {
+     "n": 11,
+     "name": "2",
+     "role": "signal",
+     "x": 0.682,
+     "y": 0.071
+    },
+    {
+     "n": 12,
+     "name": "GND.2",
+     "role": "ground",
+     "x": 0.738,
+     "y": 0.071
+    },
+    {
+     "n": 13,
+     "name": "RESET.2",
+     "role": "signal",
+     "x": 0.795,
+     "y": 0.071
+    },
+    {
+     "n": 14,
+     "name": "0",
+     "role": "data",
+     "x": 0.851,
+     "y": 0.071
+    },
+    {
+     "n": 15,
+     "name": "1",
+     "role": "data",
+     "x": 0.908,
+     "y": 0.071
+    },
+    {
+     "n": 16,
+     "name": "13",
+     "role": "data",
+     "x": 0.116,
+     "y": 0.928
+    },
+    {
+     "n": 17,
+     "name": "3.3V",
+     "role": "power",
+     "x": 0.173,
+     "y": 0.928
+    },
+    {
+     "n": 18,
+     "name": "AREF",
+     "role": "signal",
+     "x": 0.229,
+     "y": 0.928
+    },
+    {
+     "n": 19,
+     "name": "A0",
+     "role": "signal",
+     "x": 0.286,
+     "y": 0.928
+    },
+    {
+     "n": 20,
+     "name": "A1",
+     "role": "signal",
+     "x": 0.342,
+     "y": 0.928
+    },
+    {
+     "n": 21,
+     "name": "A2",
+     "role": "signal",
+     "x": 0.399,
+     "y": 0.928
+    },
+    {
+     "n": 22,
+     "name": "A3",
+     "role": "signal",
+     "x": 0.456,
+     "y": 0.928
+    },
+    {
+     "n": 23,
+     "name": "A4",
+     "role": "data",
+     "x": 0.512,
+     "y": 0.928
+    },
+    {
+     "n": 24,
+     "name": "A5",
+     "role": "data",
+     "x": 0.569,
+     "y": 0.928
+    },
+    {
+     "n": 25,
+     "name": "A6",
+     "role": "signal",
+     "x": 0.625,
+     "y": 0.928
+    },
+    {
+     "n": 26,
+     "name": "A7",
+     "role": "signal",
+     "x": 0.682,
+     "y": 0.928
+    },
+    {
+     "n": 27,
+     "name": "5V",
+     "role": "power",
+     "x": 0.738,
+     "y": 0.928
+    },
+    {
+     "n": 28,
+     "name": "RESET",
+     "role": "signal",
+     "x": 0.795,
+     "y": 0.928
+    },
+    {
+     "n": 29,
+     "name": "GND.1",
+     "role": "ground",
+     "x": 0.851,
+     "y": 0.928
+    },
+    {
+     "n": 30,
+     "name": "VIN",
+     "role": "power",
+     "x": 0.908,
+     "y": 0.928
+    },
+    {
+     "n": 31,
+     "name": "12.2",
+     "role": "data",
+     "x": 0.965,
+     "y": 0.642
+    },
+    {
+     "n": 32,
+     "name": "5V.2",
+     "role": "power",
+     "x": 0.908,
+     "y": 0.642
+    },
+    {
+     "n": 33,
+     "name": "13.2",
+     "role": "data",
+     "x": 0.965,
+     "y": 0.499
+    },
+    {
+     "n": 34,
+     "name": "11.2",
+     "role": "data",
+     "x": 0.908,
+     "y": 0.499
+    },
+    {
+     "n": 35,
+     "name": "RESET.3",
+     "role": "signal",
+     "x": 0.965,
+     "y": 0.357
+    },
+    {
+     "n": 36,
+     "name": "GND.3",
+     "role": "ground",
+     "x": 0.908,
+     "y": 0.357
+    }
+   ]
+  },
+  {
+   "name": "arduino-uno",
+   "title": "Arduino Uno",
+   "width": 274,
+   "height": 202,
+   "pins": [
+    {
+     "n": 1,
+     "name": "A5.2",
+     "role": "data",
+     "x": 0.317,
+     "y": 0.045
+    },
+    {
+     "n": 2,
+     "name": "A4.2",
+     "role": "data",
+     "x": 0.354,
+     "y": 0.045
+    },
+    {
+     "n": 3,
+     "name": "AREF",
+     "role": "signal",
+     "x": 0.386,
+     "y": 0.045
+    },
+    {
+     "n": 4,
+     "name": "GND.1",
+     "role": "ground",
+     "x": 0.421,
+     "y": 0.045
+    },
+    {
+     "n": 5,
+     "name": "13",
+     "role": "data",
+     "x": 0.456,
+     "y": 0.045
+    },
+    {
+     "n": 6,
+     "name": "12",
+     "role": "data",
+     "x": 0.49,
+     "y": 0.045
+    },
+    {
+     "n": 7,
+     "name": "11",
+     "role": "data",
+     "x": 0.525,
+     "y": 0.045
+    },
+    {
+     "n": 8,
+     "name": "10",
+     "role": "data",
+     "x": 0.56,
+     "y": 0.045
+    },
+    {
+     "n": 9,
+     "name": "9",
+     "role": "signal",
+     "x": 0.594,
+     "y": 0.045
+    },
+    {
+     "n": 10,
+     "name": "8",
+     "role": "signal",
+     "x": 0.631,
+     "y": 0.045
+    },
+    {
+     "n": 11,
+     "name": "7",
+     "role": "signal",
+     "x": 0.689,
+     "y": 0.045
+    },
+    {
+     "n": 12,
+     "name": "6",
+     "role": "signal",
+     "x": 0.724,
+     "y": 0.045
+    },
+    {
+     "n": 13,
+     "name": "5",
+     "role": "signal",
+     "x": 0.758,
+     "y": 0.045
+    },
+    {
+     "n": 14,
+     "name": "4",
+     "role": "signal",
+     "x": 0.793,
+     "y": 0.045
+    },
+    {
+     "n": 15,
+     "name": "3",
+     "role": "signal",
+     "x": 0.828,
+     "y": 0.045
+    },
+    {
+     "n": 16,
+     "name": "2",
+     "role": "signal",
+     "x": 0.862,
+     "y": 0.045
+    },
+    {
+     "n": 17,
+     "name": "1",
+     "role": "data",
+     "x": 0.897,
+     "y": 0.045
+    },
+    {
+     "n": 18,
+     "name": "0",
+     "role": "data",
+     "x": 0.931,
+     "y": 0.045
+    },
+    {
+     "n": 19,
+     "name": "IOREF",
+     "role": "signal",
+     "x": 0.478,
+     "y": 0.95
+    },
+    {
+     "n": 20,
+     "name": "RESET",
+     "role": "signal",
+     "x": 0.512,
+     "y": 0.95
+    },
+    {
+     "n": 21,
+     "name": "3.3V",
+     "role": "power",
+     "x": 0.547,
+     "y": 0.95
+    },
+    {
+     "n": 22,
+     "name": "5V",
+     "role": "power",
+     "x": 0.583,
+     "y": 0.95
+    },
+    {
+     "n": 23,
+     "name": "GND.2",
+     "role": "ground",
+     "x": 0.618,
+     "y": 0.95
+    },
+    {
+     "n": 24,
+     "name": "GND.3",
+     "role": "ground",
+     "x": 0.653,
+     "y": 0.95
+    },
+    {
+     "n": 25,
+     "name": "VIN",
+     "role": "power",
+     "x": 0.687,
+     "y": 0.95
+    },
+    {
+     "n": 26,
+     "name": "A0",
+     "role": "signal",
+     "x": 0.758,
+     "y": 0.95
+    },
+    {
+     "n": 27,
+     "name": "A1",
+     "role": "signal",
+     "x": 0.793,
+     "y": 0.95
+    },
+    {
+     "n": 28,
+     "name": "A2",
+     "role": "signal",
+     "x": 0.828,
+     "y": 0.95
+    },
+    {
+     "n": 29,
+     "name": "A3",
+     "role": "signal",
+     "x": 0.862,
+     "y": 0.95
+    },
+    {
+     "n": 30,
+     "name": "A4",
+     "role": "data",
+     "x": 0.897,
+     "y": 0.95
+    },
+    {
+     "n": 31,
+     "name": "A5",
+     "role": "data",
+     "x": 0.931,
+     "y": 0.95
+    }
+   ]
+  },
+  {
+   "name": "biaxial-stepper",
+   "title": "Biaxial Stepper",
+   "width": 212,
+   "height": 255,
+   "pins": [
+    {
+     "n": 1,
+     "name": "A1-",
+     "role": "signal",
+     "x": 0.213,
+     "y": 0.428
+    },
+    {
+     "n": 2,
+     "name": "A1+",
+     "role": "signal",
+     "x": 0.213,
+     "y": 0.466
+    },
+    {
+     "n": 3,
+     "name": "B1+",
+     "role": "signal",
+     "x": 0.213,
+     "y": 0.503
+    },
+    {
+     "n": 4,
+     "name": "B1-",
+     "role": "signal",
+     "x": 0.213,
+     "y": 0.541
+    },
+    {
+     "n": 5,
+     "name": "A2-",
+     "role": "signal",
+     "x": 0.213,
+     "y": 0.579
+    },
+    {
+     "n": 6,
+     "name": "A2+",
+     "role": "signal",
+     "x": 0.213,
+     "y": 0.616
+    },
+    {
+     "n": 7,
+     "name": "B2+",
+     "role": "signal",
+     "x": 0.213,
+     "y": 0.654
+    },
+    {
+     "n": 8,
+     "name": "B2-",
+     "role": "signal",
+     "x": 0.213,
+     "y": 0.692
+    }
+   ]
+  },
+  {
+   "name": "big-sound-sensor",
+   "title": "Big Sound Sensor",
+   "width": 140,
+   "height": 50,
+   "pins": [
+    {
+     "n": 1,
+     "name": "AOUT",
+     "role": "signal",
+     "x": 0,
+     "y": 0.218
+    },
+    {
+     "n": 2,
+     "name": "GND",
+     "role": "ground",
+     "x": 0,
+     "y": 0.406
+    },
+    {
+     "n": 3,
+     "name": "VCC",
+     "role": "power",
+     "x": 0,
+     "y": 0.605
+    },
+    {
+     "n": 4,
+     "name": "DOUT",
+     "role": "signal",
+     "x": 0,
+     "y": 0.803
+    }
+   ]
+  },
+  {
+   "name": "buzzer",
+   "title": "Buzzer",
+   "width": 64,
+   "height": 76,
+   "pins": [
+    {
+     "n": 1,
+     "name": "1",
+     "role": "signal",
+     "x": 0.42,
+     "y": 1.111
+    },
+    {
+     "n": 2,
+     "name": "2",
+     "role": "signal",
+     "x": 0.576,
+     "y": 1.111
+    }
+   ]
+  },
+  {
+   "name": "dht22",
+   "title": "DHT22",
+   "width": 57,
+   "height": 117,
+   "pins": [
+    {
+     "n": 1,
+     "name": "VCC",
+     "role": "power",
+     "x": 0.263,
+     "y": 0.984
+    },
+    {
+     "n": 2,
+     "name": "SDA",
+     "role": "signal",
+     "x": 0.429,
+     "y": 0.984
+    },
+    {
+     "n": 3,
+     "name": "NC",
+     "role": "signal",
+     "x": 0.598,
+     "y": 0.984
+    },
+    {
+     "n": 4,
+     "name": "GND",
+     "role": "ground",
+     "x": 0.767,
+     "y": 0.984
+    }
+   ]
+  },
+  {
+   "name": "dip-switch-8",
+   "title": "Dip Switch 8",
+   "width": 83,
+   "height": 55,
+   "pins": [
+    {
+     "n": 1,
+     "name": "1a",
+     "role": "signal",
+     "x": 0.098,
+     "y": 0.927
+    },
+    {
+     "n": 2,
+     "name": "2a",
+     "role": "signal",
+     "x": 0.214,
+     "y": 0.927
+    },
+    {
+     "n": 3,
+     "name": "3a",
+     "role": "signal",
+     "x": 0.329,
+     "y": 0.927
+    },
+    {
+     "n": 4,
+     "name": "4a",
+     "role": "signal",
+     "x": 0.445,
+     "y": 0.927
+    },
+    {
+     "n": 5,
+     "name": "5a",
+     "role": "signal",
+     "x": 0.561,
+     "y": 0.927
+    },
+    {
+     "n": 6,
+     "name": "6a",
+     "role": "signal",
+     "x": 0.677,
+     "y": 0.927
+    },
+    {
+     "n": 7,
+     "name": "7a",
+     "role": "signal",
+     "x": 0.793,
+     "y": 0.927
+    },
+    {
+     "n": 8,
+     "name": "8a",
+     "role": "signal",
+     "x": 0.909,
+     "y": 0.927
+    },
+    {
+     "n": 9,
+     "name": "8b",
+     "role": "signal",
+     "x": 0.909,
+     "y": 0.054
+    },
+    {
+     "n": 10,
+     "name": "7b",
+     "role": "signal",
+     "x": 0.793,
+     "y": 0.054
+    },
+    {
+     "n": 11,
+     "name": "6b",
+     "role": "signal",
+     "x": 0.677,
+     "y": 0.054
+    },
+    {
+     "n": 12,
+     "name": "5b",
+     "role": "signal",
+     "x": 0.561,
+     "y": 0.054
+    },
+    {
+     "n": 13,
+     "name": "4b",
+     "role": "signal",
+     "x": 0.445,
+     "y": 0.054
+    },
+    {
+     "n": 14,
+     "name": "3b",
+     "role": "signal",
+     "x": 0.329,
+     "y": 0.054
+    },
+    {
+     "n": 15,
+     "name": "2b",
+     "role": "signal",
+     "x": 0.214,
+     "y": 0.054
+    },
+    {
+     "n": 16,
+     "name": "1b",
+     "role": "signal",
+     "x": 0.098,
+     "y": 0.054
+    }
+   ]
+  },
+  {
+   "name": "ds1307",
+   "title": "DS1307",
+   "width": 98,
+   "height": 84,
+   "pins": [
+    {
+     "n": 1,
+     "name": "GND",
+     "role": "ground",
+     "x": 0.097,
+     "y": 0.179
+    },
+    {
+     "n": 2,
+     "name": "5V",
+     "role": "power",
+     "x": 0.097,
+     "y": 0.298
+    },
+    {
+     "n": 3,
+     "name": "SDA",
+     "role": "data",
+     "x": 0.097,
+     "y": 0.411
+    },
+    {
+     "n": 4,
+     "name": "SCL",
+     "role": "data",
+     "x": 0.097,
+     "y": 0.524
+    },
+    {
+     "n": 5,
+     "name": "SQW",
+     "role": "signal",
+     "x": 0.097,
+     "y": 0.643
+    }
+   ]
+  },
+  {
+   "name": "esp32-devkit-v1",
+   "title": "ESP32 Devkit V1",
+   "width": 107,
+   "height": 204,
+   "pins": [
+    {
+     "n": 1,
+     "name": "VIN",
+     "role": "power",
+     "x": 0.047,
+     "y": 0.776
+    },
+    {
+     "n": 2,
+     "name": "GND.2",
+     "role": "ground",
+     "x": 0.047,
+     "y": 0.729
+    },
+    {
+     "n": 3,
+     "name": "D13",
+     "role": "data",
+     "x": 0.047,
+     "y": 0.683
+    },
+    {
+     "n": 4,
+     "name": "D12",
+     "role": "data",
+     "x": 0.047,
+     "y": 0.638
+    },
+    {
+     "n": 5,
+     "name": "D14",
+     "role": "data",
+     "x": 0.047,
+     "y": 0.587
+    },
+    {
+     "n": 6,
+     "name": "D27",
+     "role": "signal",
+     "x": 0.047,
+     "y": 0.542
+    },
+    {
+     "n": 7,
+     "name": "D26",
+     "role": "signal",
+     "x": 0.047,
+     "y": 0.494
+    },
+    {
+     "n": 8,
+     "name": "D25",
+     "role": "signal",
+     "x": 0.047,
+     "y": 0.447
+    },
+    {
+     "n": 9,
+     "name": "D33",
+     "role": "signal",
+     "x": 0.047,
+     "y": 0.4
+    },
+    {
+     "n": 10,
+     "name": "D32",
+     "role": "signal",
+     "x": 0.047,
+     "y": 0.353
+    },
+    {
+     "n": 11,
+     "name": "D35",
+     "role": "signal",
+     "x": 0.047,
+     "y": 0.308
+    },
+    {
+     "n": 12,
+     "name": "D34",
+     "role": "signal",
+     "x": 0.047,
+     "y": 0.26
+    },
+    {
+     "n": 13,
+     "name": "VN",
+     "role": "signal",
+     "x": 0.047,
+     "y": 0.215
+    },
+    {
+     "n": 14,
+     "name": "VP",
+     "role": "signal",
+     "x": 0.047,
+     "y": 0.166
+    },
+    {
+     "n": 15,
+     "name": "EN",
+     "role": "signal",
+     "x": 0.047,
+     "y": 0.117
+    },
+    {
+     "n": 16,
+     "name": "3V3",
+     "role": "power",
+     "x": 0.95,
+     "y": 0.776
+    },
+    {
+     "n": 17,
+     "name": "GND.1",
+     "role": "ground",
+     "x": 0.95,
+     "y": 0.729
+    },
+    {
+     "n": 18,
+     "name": "D15",
+     "role": "data",
+     "x": 0.95,
+     "y": 0.683
+    },
+    {
+     "n": 19,
+     "name": "D2",
+     "role": "signal",
+     "x": 0.95,
+     "y": 0.638
+    },
+    {
+     "n": 20,
+     "name": "D4",
+     "role": "signal",
+     "x": 0.95,
+     "y": 0.587
+    },
+    {
+     "n": 21,
+     "name": "RX2",
+     "role": "data",
+     "x": 0.95,
+     "y": 0.542
+    },
+    {
+     "n": 22,
+     "name": "TX2",
+     "role": "data",
+     "x": 0.95,
+     "y": 0.494
+    },
+    {
+     "n": 23,
+     "name": "D5",
+     "role": "data",
+     "x": 0.95,
+     "y": 0.447
+    },
+    {
+     "n": 24,
+     "name": "D18",
+     "role": "data",
+     "x": 0.95,
+     "y": 0.4
+    },
+    {
+     "n": 25,
+     "name": "D19",
+     "role": "data",
+     "x": 0.95,
+     "y": 0.353
+    },
+    {
+     "n": 26,
+     "name": "D21",
+     "role": "data",
+     "x": 0.95,
+     "y": 0.308
+    },
+    {
+     "n": 27,
+     "name": "RX0",
+     "role": "data",
+     "x": 0.95,
+     "y": 0.26
+    },
+    {
+     "n": 28,
+     "name": "TX0",
+     "role": "data",
+     "x": 0.95,
+     "y": 0.215
+    },
+    {
+     "n": 29,
+     "name": "D22",
+     "role": "data",
+     "x": 0.95,
+     "y": 0.166
+    },
+    {
+     "n": 30,
+     "name": "D23",
+     "role": "data",
+     "x": 0.95,
+     "y": 0.117
+    }
+   ]
+  },
+  {
+   "name": "flame-sensor",
+   "title": "Flame Sensor",
+   "width": 200,
+   "height": 61,
+   "pins": [
+    {
+     "n": 1,
+     "name": "VCC",
+     "role": "power",
+     "x": 0.995,
+     "y": 0.237
+    },
+    {
+     "n": 2,
+     "name": "GND",
+     "role": "ground",
+     "x": 0.995,
+     "y": 0.395
+    },
+    {
+     "n": 3,
+     "name": "DOUT",
+     "role": "signal",
+     "x": 0.995,
+     "y": 0.553
+    },
+    {
+     "n": 4,
+     "name": "AOUT",
+     "role": "signal",
+     "x": 0.995,
+     "y": 0.711
+    }
+   ]
+  },
+  {
+   "name": "franzininho",
+   "title": "Franzininho",
+   "width": 242,
+   "height": 113,
+   "pins": [
+    {
+     "n": 1,
+     "name": "GND.1",
+     "role": "ground",
+     "x": 0.903,
+     "y": 0.205
+    },
+    {
+     "n": 2,
+     "name": "VCC.1",
+     "role": "power",
+     "x": 0.903,
+     "y": 0.29
+    },
+    {
+     "n": 3,
+     "name": "PB4",
+     "role": "signal",
+     "x": 0.903,
+     "y": 0.375
+    },
+    {
+     "n": 4,
+     "name": "PB5",
+     "role": "signal",
+     "x": 0.903,
+     "y": 0.46
+    },
+    {
+     "n": 5,
+     "name": "PB3",
+     "role": "signal",
+     "x": 0.903,
+     "y": 0.544
+    },
+    {
+     "n": 6,
+     "name": "PB2",
+     "role": "data",
+     "x": 0.903,
+     "y": 0.628
+    },
+    {
+     "n": 7,
+     "name": "PB1",
+     "role": "data",
+     "x": 0.903,
+     "y": 0.713
+    },
+    {
+     "n": 8,
+     "name": "PB0",
+     "role": "data",
+     "x": 0.903,
+     "y": 0.798
+    },
+    {
+     "n": 9,
+     "name": "VIN",
+     "role": "power",
+     "x": 0.549,
+     "y": 0.071
+    },
+    {
+     "n": 10,
+     "name": "GND.2",
+     "role": "ground",
+     "x": 0.591,
+     "y": 0.071
+    },
+    {
+     "n": 11,
+     "name": "VCC.2",
+     "role": "power",
+     "x": 0.633,
+     "y": 0.071
+    }
+   ]
+  },
+  {
+   "name": "gas-sensor",
+   "title": "Gas Sensor",
+   "width": 137,
+   "height": 63,
+   "pins": [
+    {
+     "n": 1,
+     "name": "AOUT",
+     "role": "signal",
+     "x": 1,
+     "y": 0.263
+    },
+    {
+     "n": 2,
+     "name": "DOUT",
+     "role": "signal",
+     "x": 1,
+     "y": 0.42
+    },
+    {
+     "n": 3,
+     "name": "GND",
+     "role": "ground",
+     "x": 1,
+     "y": 0.581
+    },
+    {
+     "n": 4,
+     "name": "VCC",
+     "role": "power",
+     "x": 1,
+     "y": 0.736
+    }
+   ]
+  },
+  {
+   "name": "hc-sr04",
+   "title": "Hc SR04",
+   "width": 170,
+   "height": 94,
+   "pins": [
+    {
+     "n": 1,
+     "name": "VCC",
+     "role": "power",
+     "x": 0.419,
+     "y": 1
+    },
+    {
+     "n": 2,
+     "name": "TRIG",
+     "role": "signal",
+     "x": 0.478,
+     "y": 1
+    },
+    {
+     "n": 3,
+     "name": "ECHO",
+     "role": "signal",
+     "x": 0.537,
+     "y": 1
+    },
+    {
+     "n": 4,
+     "name": "GND",
+     "role": "ground",
+     "x": 0.596,
+     "y": 1
+    }
+   ]
+  },
+  {
+   "name": "heart-beat-sensor",
+   "title": "Heart Beat Sensor",
+   "width": 88,
+   "height": 79,
+   "pins": [
+    {
+     "n": 1,
+     "name": "GND",
+     "role": "ground",
+     "x": 0.984,
+     "y": 0.225
+    },
+    {
+     "n": 2,
+     "name": "VCC",
+     "role": "power",
+     "x": 0.984,
+     "y": 0.347
+    },
+    {
+     "n": 3,
+     "name": "OUT",
+     "role": "signal",
+     "x": 0.984,
+     "y": 0.474
+    }
+   ]
+  },
+  {
+   "name": "hx711",
+   "title": "HX711",
+   "width": 219,
+   "height": 163,
+   "pins": [
+    {
+     "n": 1,
+     "name": "VCC",
+     "role": "power",
+     "x": 0.032,
+     "y": 0.338
+    },
+    {
+     "n": 2,
+     "name": "DT",
+     "role": "signal",
+     "x": 0.032,
+     "y": 0.223
+    },
+    {
+     "n": 3,
+     "name": "SCK",
+     "role": "signal",
+     "x": 0.032,
+     "y": 0.284
+    },
+    {
+     "n": 4,
+     "name": "GND",
+     "role": "ground",
+     "x": 0.032,
+     "y": 0.163
+    }
+   ]
+  },
+  {
+   "name": "ili9341",
+   "title": "ILI9341",
+   "width": 176,
+   "height": 293,
+   "pins": [
+    {
+     "n": 1,
+     "name": "VCC",
+     "role": "power",
+     "x": 0.275,
+     "y": 0.979
+    },
+    {
+     "n": 2,
+     "name": "GND",
+     "role": "ground",
+     "x": 0.329,
+     "y": 0.979
+    },
+    {
+     "n": 3,
+     "name": "CS",
+     "role": "data",
+     "x": 0.384,
+     "y": 0.979
+    },
+    {
+     "n": 4,
+     "name": "RST",
+     "role": "signal",
+     "x": 0.439,
+     "y": 0.979
+    },
+    {
+     "n": 5,
+     "name": "D/C",
+     "role": "signal",
+     "x": 0.493,
+     "y": 0.979
+    },
+    {
+     "n": 6,
+     "name": "MOSI",
+     "role": "data",
+     "x": 0.548,
+     "y": 0.979
+    },
+    {
+     "n": 7,
+     "name": "SCK",
+     "role": "data",
+     "x": 0.603,
+     "y": 0.979
+    },
+    {
+     "n": 8,
+     "name": "LED",
+     "role": "signal",
+     "x": 0.657,
+     "y": 0.979
+    },
+    {
+     "n": 9,
+     "name": "MISO",
+     "role": "data",
+     "x": 0.712,
+     "y": 0.979
+    }
+   ]
+  },
+  {
+   "name": "ir-receiver",
+   "title": "IR Receiver",
+   "width": 61,
+   "height": 89,
+   "pins": [
+    {
+     "n": 1,
+     "name": "GND",
+     "role": "ground",
+     "x": 0.343,
+     "y": 0.989
+    },
+    {
+     "n": 2,
+     "name": "VCC",
+     "role": "power",
+     "x": 0.5,
+     "y": 0.989
+    },
+    {
+     "n": 3,
+     "name": "DAT",
+     "role": "signal",
+     "x": 0.657,
+     "y": 0.989
+    }
+   ]
+  },
+  {
+   "name": "ir-remote",
+   "title": "IR Remote",
+   "width": 151,
+   "height": 316,
+   "pins": []
+  },
+  {
+   "name": "ks2e-m-dc5",
+   "title": "KS2E M DC5",
+   "width": 79,
+   "height": 38,
+   "pins": [
+    {
+     "n": 1,
+     "name": "NO2",
+     "role": "signal",
+     "x": 0.069,
+     "y": 0.135
+    },
+    {
+     "n": 2,
+     "name": "NC2",
+     "role": "signal",
+     "x": 0.315,
+     "y": 0.135
+    },
+    {
+     "n": 3,
+     "name": "P2",
+     "role": "signal",
+     "x": 0.567,
+     "y": 0.135
+    },
+    {
+     "n": 4,
+     "name": "COIL2",
+     "role": "ground",
+     "x": 0.932,
+     "y": 0.135
+    },
+    {
+     "n": 5,
+     "name": "NO1",
+     "role": "signal",
+     "x": 0.069,
+     "y": 0.865
+    },
+    {
+     "n": 6,
+     "name": "NC1",
+     "role": "signal",
+     "x": 0.315,
+     "y": 0.865
+    },
+    {
+     "n": 7,
+     "name": "P1",
+     "role": "signal",
+     "x": 0.567,
+     "y": 0.865
+    },
+    {
+     "n": 8,
+     "name": "COIL1",
+     "role": "signal",
+     "x": 0.932,
+     "y": 0.865
+    }
+   ]
+  },
+  {
+   "name": "ky-040",
+   "title": "Ky 040",
+   "width": 116,
+   "height": 70,
+   "pins": [
+    {
+     "n": 1,
+     "name": "CLK",
+     "role": "signal",
+     "x": 0.996,
+     "y": 0.112
+    },
+    {
+     "n": 2,
+     "name": "DT",
+     "role": "signal",
+     "x": 0.996,
+     "y": 0.247
+    },
+    {
+     "n": 3,
+     "name": "SW",
+     "role": "signal",
+     "x": 0.996,
+     "y": 0.383
+    },
+    {
+     "n": 4,
+     "name": "VCC",
+     "role": "power",
+     "x": 0.996,
+     "y": 0.516
+    },
+    {
+     "n": 5,
+     "name": "GND",
+     "role": "ground",
+     "x": 0.996,
+     "y": 0.646
+    }
+   ]
+  },
+  {
+   "name": "lcd1602",
+   "title": "LCD1602",
+   "width": 302,
+   "height": 136,
+   "pins": [
+    {
+     "n": 1,
+     "name": "VSS",
+     "role": "ground",
+     "x": 0.106,
+     "y": 0.963
+    },
+    {
+     "n": 2,
+     "name": "VDD",
+     "role": "power",
+     "x": 0.137,
+     "y": 0.963
+    },
+    {
+     "n": 3,
+     "name": "V0",
+     "role": "signal",
+     "x": 0.17,
+     "y": 0.963
+    },
+    {
+     "n": 4,
+     "name": "RS",
+     "role": "signal",
+     "x": 0.2,
+     "y": 0.963
+    },
+    {
+     "n": 5,
+     "name": "RW",
+     "role": "signal",
+     "x": 0.233,
+     "y": 0.963
+    },
+    {
+     "n": 6,
+     "name": "E",
+     "role": "signal",
+     "x": 0.265,
+     "y": 0.963
+    },
+    {
+     "n": 7,
+     "name": "D0",
+     "role": "signal",
+     "x": 0.296,
+     "y": 0.963
+    },
+    {
+     "n": 8,
+     "name": "D1",
+     "role": "signal",
+     "x": 0.329,
+     "y": 0.963
+    },
+    {
+     "n": 9,
+     "name": "D2",
+     "role": "signal",
+     "x": 0.36,
+     "y": 0.963
+    },
+    {
+     "n": 10,
+     "name": "D3",
+     "role": "signal",
+     "x": 0.392,
+     "y": 0.963
+    },
+    {
+     "n": 11,
+     "name": "D4",
+     "role": "signal",
+     "x": 0.423,
+     "y": 0.963
+    },
+    {
+     "n": 12,
+     "name": "D5",
+     "role": "signal",
+     "x": 0.455,
+     "y": 0.963
+    },
+    {
+     "n": 13,
+     "name": "D6",
+     "role": "signal",
+     "x": 0.486,
+     "y": 0.963
+    },
+    {
+     "n": 14,
+     "name": "D7",
+     "role": "signal",
+     "x": 0.518,
+     "y": 0.963
+    },
+    {
+     "n": 15,
+     "name": "A",
+     "role": "signal",
+     "x": 0.551,
+     "y": 0.963
+    },
+    {
+     "n": 16,
+     "name": "K",
+     "role": "signal",
+     "x": 0.582,
+     "y": 0.963
+    }
+   ]
+  },
+  {
+   "name": "lcd2004",
+   "title": "LCD2004",
+   "width": 355,
+   "height": 180,
+   "pins": [
+    {
+     "n": 1,
+     "name": "VSS",
+     "role": "ground",
+     "x": 0.09,
+     "y": 0.972
+    },
+    {
+     "n": 2,
+     "name": "VDD",
+     "role": "power",
+     "x": 0.117,
+     "y": 0.972
+    },
+    {
+     "n": 3,
+     "name": "V0",
+     "role": "signal",
+     "x": 0.145,
+     "y": 0.972
+    },
+    {
+     "n": 4,
+     "name": "RS",
+     "role": "signal",
+     "x": 0.17,
+     "y": 0.972
+    },
+    {
+     "n": 5,
+     "name": "RW",
+     "role": "signal",
+     "x": 0.198,
+     "y": 0.972
+    },
+    {
+     "n": 6,
+     "name": "E",
+     "role": "signal",
+     "x": 0.225,
+     "y": 0.972
+    },
+    {
+     "n": 7,
+     "name": "D0",
+     "role": "signal",
+     "x": 0.252,
+     "y": 0.972
+    },
+    {
+     "n": 8,
+     "name": "D1",
+     "role": "signal",
+     "x": 0.28,
+     "y": 0.972
+    },
+    {
+     "n": 9,
+     "name": "D2",
+     "role": "signal",
+     "x": 0.307,
+     "y": 0.972
+    },
+    {
+     "n": 10,
+     "name": "D3",
+     "role": "signal",
+     "x": 0.333,
+     "y": 0.972
+    },
+    {
+     "n": 11,
+     "name": "D4",
+     "role": "signal",
+     "x": 0.36,
+     "y": 0.972
+    },
+    {
+     "n": 12,
+     "name": "D5",
+     "role": "signal",
+     "x": 0.387,
+     "y": 0.972
+    },
+    {
+     "n": 13,
+     "name": "D6",
+     "role": "signal",
+     "x": 0.414,
+     "y": 0.972
+    },
+    {
+     "n": 14,
+     "name": "D7",
+     "role": "signal",
+     "x": 0.44,
+     "y": 0.972
+    },
+    {
+     "n": 15,
+     "name": "A",
+     "role": "signal",
+     "x": 0.468,
+     "y": 0.972
+    },
+    {
+     "n": 16,
+     "name": "K",
+     "role": "signal",
+     "x": 0.495,
+     "y": 0.972
+    }
+   ]
+  },
+  {
+   "name": "led-bar-graph",
+   "title": "LED Bar Graph",
+   "width": 38,
+   "height": 96,
+   "pins": [
+    {
+     "n": 1,
+     "name": "A1",
+     "role": "signal",
+     "x": 0.126,
+     "y": 0.05
+    },
+    {
+     "n": 2,
+     "name": "A2",
+     "role": "signal",
+     "x": 0.126,
+     "y": 0.149
+    },
+    {
+     "n": 3,
+     "name": "A3",
+     "role": "signal",
+     "x": 0.126,
+     "y": 0.249
+    },
+    {
+     "n": 4,
+     "name": "A4",
+     "role": "signal",
+     "x": 0.126,
+     "y": 0.349
+    },
+    {
+     "n": 5,
+     "name": "A5",
+     "role": "signal",
+     "x": 0.126,
+     "y": 0.448
+    },
+    {
+     "n": 6,
+     "name": "A6",
+     "role": "signal",
+     "x": 0.126,
+     "y": 0.548
+    },
+    {
+     "n": 7,
+     "name": "A7",
+     "role": "signal",
+     "x": 0.126,
+     "y": 0.648
+    },
+    {
+     "n": 8,
+     "name": "A8",
+     "role": "signal",
+     "x": 0.126,
+     "y": 0.747
+    },
+    {
+     "n": 9,
+     "name": "A9",
+     "role": "signal",
+     "x": 0.126,
+     "y": 0.847
+    },
+    {
+     "n": 10,
+     "name": "A10",
+     "role": "signal",
+     "x": 0.126,
+     "y": 0.946
+    },
+    {
+     "n": 11,
+     "name": "C1",
+     "role": "signal",
+     "x": 0.874,
+     "y": 0.05
+    },
+    {
+     "n": 12,
+     "name": "C2",
+     "role": "signal",
+     "x": 0.874,
+     "y": 0.149
+    },
+    {
+     "n": 13,
+     "name": "C3",
+     "role": "signal",
+     "x": 0.874,
+     "y": 0.249
+    },
+    {
+     "n": 14,
+     "name": "C4",
+     "role": "signal",
+     "x": 0.874,
+     "y": 0.349
+    },
+    {
+     "n": 15,
+     "name": "C5",
+     "role": "signal",
+     "x": 0.874,
+     "y": 0.448
+    },
+    {
+     "n": 16,
+     "name": "C6",
+     "role": "signal",
+     "x": 0.874,
+     "y": 0.548
+    },
+    {
+     "n": 17,
+     "name": "C7",
+     "role": "signal",
+     "x": 0.874,
+     "y": 0.648
+    },
+    {
+     "n": 18,
+     "name": "C8",
+     "role": "signal",
+     "x": 0.874,
+     "y": 0.747
+    },
+    {
+     "n": 19,
+     "name": "C9",
+     "role": "signal",
+     "x": 0.874,
+     "y": 0.847
+    },
+    {
+     "n": 20,
+     "name": "C10",
+     "role": "signal",
+     "x": 0.874,
+     "y": 0.946
+    }
+   ]
+  },
+  {
+   "name": "led",
+   "title": "LED",
+   "width": 40,
+   "height": 50,
+   "pins": [
+    {
+     "n": 1,
+     "name": "A",
+     "role": "signal",
+     "x": 0.625,
+     "y": 0.84
+    },
+    {
+     "n": 2,
+     "name": "C",
+     "role": "signal",
+     "x": 0.375,
+     "y": 0.84
+    }
+   ]
+  },
+  {
+   "name": "led-ring",
+   "title": "LED Ring",
+   "width": 142,
+   "height": 153,
+   "pins": [
+    {
+     "n": 1,
+     "name": "GND",
+     "role": "ground",
+     "x": 0.398,
+     "y": 1
+    },
+    {
+     "n": 2,
+     "name": "VCC",
+     "role": "power",
+     "x": 0.466,
+     "y": 1
+    },
+    {
+     "n": 3,
+     "name": "DIN",
+     "role": "signal",
+     "x": 0.534,
+     "y": 1
+    },
+    {
+     "n": 4,
+     "name": "DOUT",
+     "role": "signal",
+     "x": 0.602,
+     "y": 1
+    }
+   ]
+  },
+  {
+   "name": "membrane-keypad",
+   "title": "Membrane Keypad",
+   "width": 266,
+   "height": 287,
+   "pins": [
+    {
+     "n": 1,
+     "name": "R1",
+     "role": "signal",
+     "x": 0.376,
+     "y": 1.177
+    },
+    {
+     "n": 2,
+     "name": "R2",
+     "role": "signal",
+     "x": 0.414,
+     "y": 1.177
+    },
+    {
+     "n": 3,
+     "name": "R3",
+     "role": "signal",
+     "x": 0.45,
+     "y": 1.177
+    },
+    {
+     "n": 4,
+     "name": "R4",
+     "role": "signal",
+     "x": 0.485,
+     "y": 1.177
+    },
+    {
+     "n": 5,
+     "name": "C1",
+     "role": "signal",
+     "x": 0.521,
+     "y": 1.177
+    },
+    {
+     "n": 6,
+     "name": "C2",
+     "role": "signal",
+     "x": 0.557,
+     "y": 1.177
+    },
+    {
+     "n": 7,
+     "name": "C3",
+     "role": "signal",
+     "x": 0.593,
+     "y": 1.177
+    },
+    {
+     "n": 8,
+     "name": "C4",
+     "role": "signal",
+     "x": 0.63,
+     "y": 1.177
+    }
+   ]
+  },
+  {
+   "name": "microsd-card",
+   "title": "Microsd Card",
+   "width": 82,
+   "height": 77,
+   "pins": [
+    {
+     "n": 1,
+     "name": "CD",
+     "role": "signal",
+     "x": 0.94,
+     "y": 0.122
+    },
+    {
+     "n": 2,
+     "name": "DO",
+     "role": "data",
+     "x": 0.94,
+     "y": 0.245
+    },
+    {
+     "n": 3,
+     "name": "GND",
+     "role": "ground",
+     "x": 0.94,
+     "y": 0.369
+    },
+    {
+     "n": 4,
+     "name": "SCK",
+     "role": "data",
+     "x": 0.94,
+     "y": 0.495
+    },
+    {
+     "n": 5,
+     "name": "VCC",
+     "role": "power",
+     "x": 0.94,
+     "y": 0.618
+    },
+    {
+     "n": 6,
+     "name": "DI",
+     "role": "data",
+     "x": 0.94,
+     "y": 0.745
+    },
+    {
+     "n": 7,
+     "name": "CS",
+     "role": "data",
+     "x": 0.94,
+     "y": 0.868
+    }
+   ]
+  },
+  {
+   "name": "mpu6050",
+   "title": "MPU6050",
+   "width": 82,
+   "height": 61,
+   "pins": [
+    {
+     "n": 1,
+     "name": "INT",
+     "role": "signal",
+     "x": 0.089,
+     "y": 0.094
+    },
+    {
+     "n": 2,
+     "name": "AD0",
+     "role": "signal",
+     "x": 0.207,
+     "y": 0.094
+    },
+    {
+     "n": 3,
+     "name": "XCL",
+     "role": "signal",
+     "x": 0.323,
+     "y": 0.094
+    },
+    {
+     "n": 4,
+     "name": "XDA",
+     "role": "signal",
+     "x": 0.441,
+     "y": 0.094
+    },
+    {
+     "n": 5,
+     "name": "SDA",
+     "role": "data",
+     "x": 0.559,
+     "y": 0.094
+    },
+    {
+     "n": 6,
+     "name": "SCL",
+     "role": "data",
+     "x": 0.676,
+     "y": 0.094
+    },
+    {
+     "n": 7,
+     "name": "GND",
+     "role": "ground",
+     "x": 0.794,
+     "y": 0.094
+    },
+    {
+     "n": 8,
+     "name": "VCC",
+     "role": "power",
+     "x": 0.911,
+     "y": 0.094
+    }
+   ]
+  },
+  {
+   "name": "nano-rp2040-connect",
+   "title": "Nano RP2040 Connect",
+   "width": 168,
+   "height": 68,
+   "pins": [
+    {
+     "n": 1,
+     "name": "D12",
+     "role": "data",
+     "x": 0.119,
+     "y": 0.015
+    },
+    {
+     "n": 2,
+     "name": "D11",
+     "role": "data",
+     "x": 0.177,
+     "y": 0.015
+    },
+    {
+     "n": 3,
+     "name": "D10",
+     "role": "signal",
+     "x": 0.233,
+     "y": 0.015
+    },
+    {
+     "n": 4,
+     "name": "D9",
+     "role": "signal",
+     "x": 0.29,
+     "y": 0.015
+    },
+    {
+     "n": 5,
+     "name": "D8",
+     "role": "signal",
+     "x": 0.347,
+     "y": 0.015
+    },
+    {
+     "n": 6,
+     "name": "D7",
+     "role": "signal",
+     "x": 0.404,
+     "y": 0.015
+    },
+    {
+     "n": 7,
+     "name": "D6",
+     "role": "signal",
+     "x": 0.461,
+     "y": 0.015
+    },
+    {
+     "n": 8,
+     "name": "D5",
+     "role": "signal",
+     "x": 0.518,
+     "y": 0.015
+    },
+    {
+     "n": 9,
+     "name": "D4",
+     "role": "signal",
+     "x": 0.575,
+     "y": 0.015
+    },
+    {
+     "n": 10,
+     "name": "D3",
+     "role": "signal",
+     "x": 0.632,
+     "y": 0.015
+    },
+    {
+     "n": 11,
+     "name": "D2",
+     "role": "signal",
+     "x": 0.689,
+     "y": 0.015
+    },
+    {
+     "n": 12,
+     "name": "GND.1",
+     "role": "ground",
+     "x": 0.743,
+     "y": 0.015
+    },
+    {
+     "n": 13,
+     "name": "RESET",
+     "role": "signal",
+     "x": 0.803,
+     "y": 0.015
+    },
+    {
+     "n": 14,
+     "name": "RX",
+     "role": "data",
+     "x": 0.914,
+     "y": 0.015
+    },
+    {
+     "n": 15,
+     "name": "TX",
+     "role": "data",
+     "x": 0.858,
+     "y": 0.015
+    },
+    {
+     "n": 16,
+     "name": "D13",
+     "role": "data",
+     "x": 0.119,
+     "y": 0.995
+    },
+    {
+     "n": 17,
+     "name": "3.3V",
+     "role": "power",
+     "x": 0.176,
+     "y": 0.995
+    },
+    {
+     "n": 18,
+     "name": "AREF",
+     "role": "signal",
+     "x": 0.233,
+     "y": 0.995
+    },
+    {
+     "n": 19,
+     "name": "A0",
+     "role": "signal",
+     "x": 0.29,
+     "y": 0.995
+    },
+    {
+     "n": 20,
+     "name": "A1",
+     "role": "signal",
+     "x": 0.347,
+     "y": 0.995
+    },
+    {
+     "n": 21,
+     "name": "A2",
+     "role": "signal",
+     "x": 0.404,
+     "y": 0.995
+    },
+    {
+     "n": 22,
+     "name": "A3",
+     "role": "signal",
+     "x": 0.461,
+     "y": 0.995
+    },
+    {
+     "n": 23,
+     "name": "A4",
+     "role": "signal",
+     "x": 0.518,
+     "y": 0.995
+    },
+    {
+     "n": 24,
+     "name": "A5",
+     "role": "signal",
+     "x": 0.575,
+     "y": 0.995
+    },
+    {
+     "n": 25,
+     "name": "A6",
+     "role": "signal",
+     "x": 0.632,
+     "y": 0.995
+    },
+    {
+     "n": 26,
+     "name": "A7",
+     "role": "signal",
+     "x": 0.689,
+     "y": 0.995
+    },
+    {
+     "n": 27,
+     "name": "5V",
+     "role": "power",
+     "x": 0.745,
+     "y": 0.995
+    },
+    {
+     "n": 28,
+     "name": "RESET.2",
+     "role": "signal",
+     "x": 0.801,
+     "y": 0.995
+    },
+    {
+     "n": 29,
+     "name": "GND.2",
+     "role": "ground",
+     "x": 0.862,
+     "y": 0.995
+    },
+    {
+     "n": 30,
+     "name": "VIN",
+     "role": "power",
+     "x": 0.915,
+     "y": 0.995
+    }
+   ]
+  },
+  {
+   "name": "neopixel",
+   "title": "Neopixel",
+   "width": 21,
+   "height": 19,
+   "pins": [
+    {
+     "n": 1,
+     "name": "VDD",
+     "role": "power",
+     "x": 0.047,
+     "y": 0.185
+    },
+    {
+     "n": 2,
+     "name": "DOUT",
+     "role": "signal",
+     "x": 0.047,
+     "y": 0.741
+    },
+    {
+     "n": 3,
+     "name": "VSS",
+     "role": "ground",
+     "x": 0.981,
+     "y": 0.741
+    },
+    {
+     "n": 4,
+     "name": "DIN",
+     "role": "ground",
+     "x": 0.981,
+     "y": 0.185
+    }
+   ]
+  },
+  {
+   "name": "neopixel-matrix",
+   "title": "Neopixel Matrix",
+   "width": 198,
+   "height": 178,
+   "pins": [
+    {
+     "n": 1,
+     "name": "GND",
+     "role": "ground",
+     "x": 0.437,
+     "y": 1.021
+    },
+    {
+     "n": 2,
+     "name": "VCC",
+     "role": "power",
+     "x": 0.485,
+     "y": 1.021
+    },
+    {
+     "n": 3,
+     "name": "DIN",
+     "role": "signal",
+     "x": 0.534,
+     "y": 1.021
+    },
+    {
+     "n": 4,
+     "name": "DOUT",
+     "role": "signal",
+     "x": 0.583,
+     "y": 1.021
+    }
+   ]
+  },
+  {
+   "name": "ntc-temperature-sensor",
+   "title": "NTC Temperature Sensor",
+   "width": 135,
+   "height": 72,
+   "pins": [
+    {
+     "n": 1,
+     "name": "GND",
+     "role": "ground",
+     "x": 0.997,
+     "y": 0.365
+    },
+    {
+     "n": 2,
+     "name": "VCC",
+     "role": "power",
+     "x": 0.997,
+     "y": 0.499
+    },
+    {
+     "n": 3,
+     "name": "OUT",
+     "role": "signal",
+     "x": 0.997,
+     "y": 0.634
+    }
+   ]
+  },
+  {
+   "name": "photoresistor-sensor",
+   "title": "Photoresistor Sensor",
+   "width": 174,
+   "height": 61,
+   "pins": [
+    {
+     "n": 1,
+     "name": "VCC",
+     "role": "power",
+     "x": 0.99,
+     "y": 0.26
+    },
+    {
+     "n": 2,
+     "name": "GND",
+     "role": "ground",
+     "x": 0.99,
+     "y": 0.423
+    },
+    {
+     "n": 3,
+     "name": "DO",
+     "role": "signal",
+     "x": 0.99,
+     "y": 0.582
+    },
+    {
+     "n": 4,
+     "name": "AO",
+     "role": "signal",
+     "x": 0.99,
+     "y": 0.74
+    }
+   ]
+  },
+  {
+   "name": "pir-motion-sensor",
+   "title": "PIR Motion Sensor",
+   "width": 91,
+   "height": 92,
+   "pins": [
+    {
+     "n": 1,
+     "name": "VCC",
+     "role": "power",
+     "x": 0.399,
+     "y": 0.996
+    },
+    {
+     "n": 2,
+     "name": "OUT",
+     "role": "signal",
+     "x": 0.506,
+     "y": 0.996
+    },
+    {
+     "n": 3,
+     "name": "GND",
+     "role": "ground",
+     "x": 0.613,
+     "y": 0.996
+    }
+   ]
+  },
+  {
+   "name": "potentiometer",
+   "title": "Potentiometer",
+   "width": 76,
+   "height": 76,
+   "pins": [
+    {
+     "n": 1,
+     "name": "GND",
+     "role": "ground",
+     "x": 0.384,
+     "y": 0.906
+    },
+    {
+     "n": 2,
+     "name": "SIG",
+     "role": "signal",
+     "x": 0.516,
+     "y": 0.906
+    },
+    {
+     "n": 3,
+     "name": "VCC",
+     "role": "power",
+     "x": 0.648,
+     "y": 0.906
+    }
+   ]
+  },
+  {
+   "name": "pushbutton-6mm",
+   "title": "Pushbutton 6mm",
+   "width": 28,
+   "height": 23,
+   "pins": [
+    {
+     "n": 1,
+     "name": "1.l",
+     "role": "signal",
+     "x": 0,
+     "y": 0.097
+    },
+    {
+     "n": 2,
+     "name": "2.l",
+     "role": "signal",
+     "x": 0,
+     "y": 0.926
+    },
+    {
+     "n": 3,
+     "name": "1.r",
+     "role": "signal",
+     "x": 0.999,
+     "y": 0.097
+    },
+    {
+     "n": 4,
+     "name": "2.r",
+     "role": "signal",
+     "x": 0.999,
+     "y": 0.926
+    }
+   ]
+  },
+  {
+   "name": "pushbutton",
+   "title": "Pushbutton",
+   "width": 67,
+   "height": 45,
+   "pins": [
+    {
+     "n": 1,
+     "name": "1.l",
+     "role": "signal",
+     "x": 0,
+     "y": 0.287
+    },
+    {
+     "n": 2,
+     "name": "2.l",
+     "role": "signal",
+     "x": 0,
+     "y": 0.706
+    },
+    {
+     "n": 3,
+     "name": "1.r",
+     "role": "signal",
+     "x": 0.996,
+     "y": 0.287
+    },
+    {
+     "n": 4,
+     "name": "2.r",
+     "role": "signal",
+     "x": 0.996,
+     "y": 0.706
+    }
+   ]
+  },
+  {
+   "name": "resistor",
+   "title": "Resistor",
+   "width": 59,
+   "height": 11,
+   "pins": [
+    {
+     "n": 1,
+     "name": "1",
+     "role": "signal",
+     "x": 0,
+     "y": 0.498
+    },
+    {
+     "n": 2,
+     "name": "2",
+     "role": "signal",
+     "x": 0.994,
+     "y": 0.498
+    }
+   ]
+  },
+  {
+   "name": "rgb-led",
+   "title": "RGB LED",
+   "width": 42,
+   "height": 73,
+   "pins": [
+    {
+     "n": 1,
+     "name": "R",
+     "role": "signal",
+     "x": 0.202,
+     "y": 0.606
+    },
+    {
+     "n": 2,
+     "name": "COM",
+     "role": "signal",
+     "x": 0.427,
+     "y": 0.744
+    },
+    {
+     "n": 3,
+     "name": "G",
+     "role": "signal",
+     "x": 0.627,
+     "y": 0.606
+    },
+    {
+     "n": 4,
+     "name": "B",
+     "role": "signal",
+     "x": 0.847,
+     "y": 0.606
+    }
+   ]
+  },
+  {
+   "name": "rotary-dialer",
+   "title": "Rotary Dialer",
+   "width": 266,
+   "height": 286,
+   "pins": [
+    {
+     "n": 1,
+     "name": "GND",
+     "role": "ground",
+     "x": 0.459,
+     "y": 1
+    },
+    {
+     "n": 2,
+     "name": "DIAL",
+     "role": "signal",
+     "x": 0.495,
+     "y": 1
+    },
+    {
+     "n": 3,
+     "name": "PULSE",
+     "role": "signal",
+     "x": 0.531,
+     "y": 1
+    }
+   ]
+  },
+  {
+   "name": "servo",
+   "title": "Servo",
+   "width": 170,
+   "height": 120,
+   "pins": [
+    {
+     "n": 1,
+     "name": "GND",
+     "role": "ground",
+     "x": 0,
+     "y": 0.418
+    },
+    {
+     "n": 2,
+     "name": "V+",
+     "role": "power",
+     "x": 0,
+     "y": 0.498
+    },
+    {
+     "n": 3,
+     "name": "PWM",
+     "role": "signal",
+     "x": 0,
+     "y": 0.577
+    }
+   ]
+  },
+  {
+   "name": "slide-potentiometer",
+   "title": "Slide Potentiometer",
+   "width": 208,
+   "height": 110,
+   "pins": [
+    {
+     "n": 1,
+     "name": "VCC",
+     "role": "power",
+     "x": 0.005,
+     "y": 0.392
+    },
+    {
+     "n": 2,
+     "name": "SIG",
+     "role": "signal",
+     "x": 0.005,
+     "y": 0.575
+    },
+    {
+     "n": 3,
+     "name": "GND",
+     "role": "ground",
+     "x": 0.996,
+     "y": 0.392
+    }
+   ]
+  },
+  {
+   "name": "slide-switch",
+   "title": "Slide Switch",
+   "width": 32,
+   "height": 35,
+   "pins": [
+    {
+     "n": 1,
+     "name": "1",
+     "role": "signal",
+     "x": 0.202,
+     "y": 0.975
+    },
+    {
+     "n": 2,
+     "name": "2",
+     "role": "signal",
+     "x": 0.498,
+     "y": 0.975
+    },
+    {
+     "n": 3,
+     "name": "3",
+     "role": "signal",
+     "x": 0.794,
+     "y": 0.975
+    }
+   ]
+  },
+  {
+   "name": "small-sound-sensor",
+   "title": "Small Sound Sensor",
+   "width": 133,
+   "height": 50,
+   "pins": [
+    {
+     "n": 1,
+     "name": "AOUT",
+     "role": "signal",
+     "x": 0,
+     "y": 0.218
+    },
+    {
+     "n": 2,
+     "name": "GND",
+     "role": "ground",
+     "x": 0,
+     "y": 0.406
+    },
+    {
+     "n": 3,
+     "name": "VCC",
+     "role": "power",
+     "x": 0,
+     "y": 0.605
+    },
+    {
+     "n": 4,
+     "name": "DOUT",
+     "role": "signal",
+     "x": 0,
+     "y": 0.803
+    }
+   ]
+  },
+  {
+   "name": "stepper-motor",
+   "title": "Stepper Motor",
+   "width": 220,
+   "height": 235,
+   "pins": [
+    {
+     "n": 1,
+     "name": "A-",
+     "role": "signal",
+     "x": 0.432,
+     "y": 1
+    },
+    {
+     "n": 2,
+     "name": "A+",
+     "role": "signal",
+     "x": 0.475,
+     "y": 1
+    },
+    {
+     "n": 3,
+     "name": "B+",
+     "role": "signal",
+     "x": 0.519,
+     "y": 1
+    },
+    {
+     "n": 4,
+     "name": "B-",
+     "role": "signal",
+     "x": 0.562,
+     "y": 1
+    }
+   ]
+  },
+  {
+   "name": "tilt-switch",
+   "title": "Tilt Switch",
+   "width": 88,
+   "height": 56,
+   "pins": [
+    {
+     "n": 1,
+     "name": "GND",
+     "role": "ground",
+     "x": 0.995,
+     "y": 0.324
+    },
+    {
+     "n": 2,
+     "name": "VCC",
+     "role": "power",
+     "x": 0.995,
+     "y": 0.5
+    },
+    {
+     "n": 3,
+     "name": "OUT",
+     "role": "signal",
+     "x": 0.995,
+     "y": 0.675
+    }
+   ]
+  }
+ ]
+}

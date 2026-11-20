@@ -71,7 +71,14 @@ Wires find their own way around the parts (`static/route.js`, and
 few bends, apart from each other, and a half-circle hop where two cross.
 Click a part to select it: it is lit in the list and its wires stand out.
 Right-click a part, or its name in the list, for its menu: picture, pins,
-rename, remove its wires, or take it off the canvas (its pins and wires stay). Pins,
+notes, rename, remove its wires, or take it off the canvas (its pins and wires stay).
+
+A pin sits on the left, the right or the bottom of its part (`m5:pinSide`), in
+the place it is listed there (`m5:pinPlace`): the pins window has a box for each
+side. A pin with no side follows the old rule (a long header odd left and even
+right). A board's ports go to the bottom. A block's notes are its
+`schema:description`: rest on a part for a second to see them with its pins,
+and *Save and ask the agent* writes them into the chat as a request. Pins,
 wires and positions are in the model, so they sync and the chat can read and
 propose them (ADR-0014 in maker-5-shared).
 

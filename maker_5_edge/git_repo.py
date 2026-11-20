@@ -287,7 +287,7 @@ def public_model(g: Graph) -> Graph:
     return out
 
 
-W, HEAD, ROW, PAD, IMG = 190, 28, 17, 8, 70
+W, HEAD, ROW, PAD, IMG, LABEL = 190, 28, 17, 8, 70, 58   # LABEL: room for the bottom pins' names
 ROLE_COLOR = {"power": "red", "ground": "black", "signal": "blue", "audio": "purple", "video": "orange", "data": "green"}
 
 
@@ -297,16 +297,37 @@ def _has_image(b: Dict[str, Any]) -> bool:
 
 def _layout(b: Dict[str, Any]) -> Dict[str, Any]:
     """The canvas's own layout (static/canvas.js layout()), so the picture matches the page."""
-    pins = b["pins"]
-    header = len(pins) >= 20
-    left = [x for i, x in enumerate(pins) if (x["n"] % 2 == 1 if header else i < (len(pins) + 1) // 2)]
-    right = [x for x in pins if x not in left]
+    sides = pin_sides(b["pins"])
+    left, right, bottom = (sides[k] for k in ("left", "right", "bottom"))
     pic = _has_image(b)
-    w = W + IMG if pic else W
+    w = max(W + IMG if pic else W, PAD * 2 + len(bottom) * ROW)
     at = {x["id"]: (0, HEAD + PAD + i * ROW + ROW / 2, -1) for i, x in enumerate(left)}
     at.update({x["id"]: (w, HEAD + PAD + i * ROW + ROW / 2, 1) for i, x in enumerate(right)})
-    h = HEAD + PAD * 2 + max(len(left), len(right), 3 if pic else 1) * ROW
-    return {"at": at, "w": w, "h": h}
+    body = HEAD + PAD * 2 + max(len(left), len(right), 3 if pic else 1) * ROW
+    h = body + (LABEL if bottom else 0)
+    x0 = (w - (len(bottom) - 1) * ROW) / 2
+    at.update({x["id"]: (x0 + i * ROW, h, 0) for i, x in enumerate(bottom)})
+    return {"at": at, "w": w, "h": h, "body": body, "bottom": bool(bottom)}
+
+
+def pin_sides(pins: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+    """Each pin on its side, in the order the person listed them (its place,
+    else its number; static/canvas.js sides()). A pin with no side: a long
+    header's odd pins left and even right, as on the board; otherwise the
+    first half of them left."""
+    header = len(pins) >= 20
+    loose = [x for x in pins if x.get("side") not in ("left", "right", "bottom")]
+    out: Dict[str, List[Dict[str, Any]]] = {"left": [], "right": [], "bottom": []}
+    for x in sorted(pins, key=lambda x: (x.get("place") or 0, x["n"])):
+        side = x.get("side")
+        if side not in out:
+            side = "left" if (x["n"] % 2 == 1 if header else loose.index(x) < (len(loose) + 1) // 2) else "right"
+        out[side].append(x)
+    return out
+
+
+def _n(v: float) -> str:
+    return str(int(v)) if float(v).is_integer() else f"{v:g}"
 
 
 def _x(s: Any) -> str:
@@ -335,7 +356,7 @@ def wiring_svg(canvas: Dict[str, Any], title: str) -> str:
     from . import route as rt
     wired = [(w, [point(e["pin"], e["block"]) for e in w["ends"]]) for w in canvas["wires"]]
     wired = [(w, e) for w, e in wired if e[0] and e[1]]
-    routes = rt.route([tuple(e) for _, e in wired], [(g["b"]["x"], g["b"]["y"], g["w"], g["h"]) for g in geo.values()])
+    routes = rt.route([tuple(e) for _, e in wired], [(g["b"]["x"], g["b"]["y"], g["w"], g["h"], g["bottom"]) for g in geo.values()])
     for i, (w, _) in enumerate(wired):
         role = next((x.get("role") for x in geo[w["ends"][0]["block"]]["b"]["pins"] if x["id"] == w["ends"][0]["pin"]), "")
         color = w.get("color") or ROLE_COLOR.get(role or "", "gray")
@@ -350,9 +371,11 @@ def wiring_svg(canvas: Dict[str, Any], title: str) -> str:
                    f'<text x="10" y="18" font-weight="bold">{_x(b["name"][:40])}</text>')
         for x in b["pins"]:
             ax, ay, side = g["at"][x["id"]]
-            anchor = "start" if side < 0 else "end"
-            out.append(f'<circle cx="{ax}" cy="{ay}" r="4" fill="{ROLE_COLOR.get(x.get("role") or "", "#888")}"/>'
-                       f'<text x="{ax - side * 9}" y="{ay + 4}" text-anchor="{anchor}">{_x(x["name"][:14])}</text>')
+            dot = f'<circle cx="{_n(ax)}" cy="{ay}" r="4" fill="{ROLE_COLOR.get(x.get("role") or "", "#888")}"/>'
+            if side:
+                out.append(dot + f'<text x="{ax - side * 9}" y="{ay + 4}" text-anchor="{"start" if side < 0 else "end"}">{_x(x["name"][:14])}</text>')
+            else:                                           # a bottom pin's name reads up from it
+                out.append(dot + f'<text x="{_n(ax + 4)}" y="{ay - 9}" transform="rotate(-90 {_n(ax + 4)} {ay - 9})">{_x(x["name"][:9])}</text>')
         out.append("</g>")
     out.append("</svg>\n")
     return "\n".join(out)

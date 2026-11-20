@@ -316,3 +316,17 @@ body.side-hidden .layout > .work, body.side-hidden .layout > #edge-connections {
 .hw-menu button { text-align: left; border: 0; background: none; padding: 6px 8px; border-radius: 4px; cursor: pointer; color: var(--ink); }
 .hw-menu button:hover:not([disabled]), .hw-menu button:focus-visible { background: color-mix(in srgb, var(--accent) 18%, transparent); }
 .hw-menu button[disabled] { opacity: .45; cursor: default; }
+/* a part's card, after resting on it a second */
+.hw-card { position: fixed; z-index: 999; max-width: 320px; padding: 8px 10px; pointer-events: none; font-size: 13px;
+  background: var(--panel); border: 1px solid var(--edge); border-radius: 8px; box-shadow: 0 6px 24px rgba(0, 0, 0, .25); }
+.hw-card__title { font-weight: 600; margin-bottom: 4px; }
+.hw-card__notes { white-space: pre-wrap; margin: 4px 0; }
+.hw-card dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; margin: 4px 0 0; }
+.hw-card dt { color: var(--muted); }
+.hw-card dd { margin: 0; }
+.hw-card .note { margin: 4px 0 0; }
+/* the pins window: a box for each side */
+.pins-sides { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.pins-side { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.pins-side textarea { width: 100%; font-family: ui-monospace, monospace; font-size: 12px; }
+@media (max-width: 640px) { .pins-sides { grid-template-columns: 1fr; } }

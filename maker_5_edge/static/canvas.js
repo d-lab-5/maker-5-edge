@@ -8,7 +8,8 @@
  *   click a pin, then another     a wire, in the colour chosen above
  *   click a wire       its colour, or remove it
  *   click a part       selects it: lit in the list, its wires lit too
- *   right-click a part its menu: picture, pins, rename, off the canvas, unwire
+ *   right-click a part its menu: picture, pins, notes, rename, off the canvas, unwire
+ *   rest on a part     after a second, its card: its notes and its pins by side
  *   drag the background, the wheel, − / +    pan and zoom
  */
 (() => {
@@ -32,22 +33,35 @@
   };
   const snap = (v) => Math.round(v / GRID) * GRID;
 
-  /** Which side and row a pin sits on: a long header odd left and even right,
-   *  as it is on the board; a small part its first half left. */
-  const IMG = 70;                                   // room for a block's picture, between the pin names
+  const IMG = 70, LABEL = 58;                       // room for a block's picture, and for the bottom pins' names
+  const SIDES = ["left", "right", "bottom"];
   const hasImage = (b) => C.pics && (!!b.fritzing || (b.image && b.image.kind !== "none"));
+  /** Each pin on its side, in the order the person listed them (its place,
+   *  else its number; git_repo.pin_sides).
+   *  A pin with no side: a long header's odd pins left and even right, as on
+   *  the board; otherwise the first half of them left. */
+  function sides(pins) {
+    const header = pins.length >= 20, loose = pins.filter((p) => !SIDES.includes(p.side));
+    const out = { left: [], right: [], bottom: [] };
+    for (const p of [...pins].sort((p, q) => (p.place || 0) - (q.place || 0) || p.n - q.n)) {
+      const side = SIDES.includes(p.side) ? p.side
+        : (header ? p.n % 2 === 1 : loose.indexOf(p) < Math.ceil(loose.length / 2)) ? "left" : "right";
+      out[side].push(p);
+    }
+    return out;
+  }
+  /** Left and right top to bottom, the bottom left to right. */
   function layout(b) {
-    const pins = b.pins;
-    const w = hasImage(b) ? W + IMG : W;
-    const header = pins.length >= 20;
-    const left = [], right = [];
-    pins.forEach((p, i) => ((header ? p.n % 2 === 1 : i < Math.ceil(pins.length / 2)) ? left : right).push(p));
-    const rows = Math.max(left.length, right.length, 1);
+    const { left, right, bottom } = sides(b.pins);
+    const w = Math.max(hasImage(b) ? W + IMG : W, PAD * 2 + bottom.length * ROW);
     const at = {};
     left.forEach((p, i) => { at[p.id] = { x: 0, y: HEAD + PAD + i * ROW + ROW / 2, side: -1 }; });
     right.forEach((p, i) => { at[p.id] = { x: w, y: HEAD + PAD + i * ROW + ROW / 2, side: 1 }; });
-    // the picture fits the pins' height: a block is never taller for it (three rows at least)
-    return { at, w, h: HEAD + PAD * 2 + Math.max(rows, hasImage(b) ? 3 : 1) * ROW };
+    // the picture fits the side pins' height: a block is never taller for it (three rows at least)
+    const body = HEAD + PAD * 2 + Math.max(left.length, right.length, hasImage(b) ? 3 : 1) * ROW;
+    const h = body + (bottom.length ? LABEL : 0), x0 = (w - (bottom.length - 1) * ROW) / 2;
+    bottom.forEach((p, i) => { at[p.id] = { x: x0 + i * ROW, y: h, side: 0 }; });
+    return { at, w, h, body, bottom: bottom.length > 0 };
   }
 
   async function api(method, path, payload) {
@@ -122,7 +136,7 @@
     function drawWires(smart = true) {
       wiresG.innerHTML = "";
       const list = data.wires.map((w) => ({ w, ends: w.ends.map((e) => pinPoint(e.pin, e.block)) })).filter((x) => x.ends[0] && x.ends[1]);
-      const rects = Object.values(geo).map((g) => ({ x: g.b.x, y: g.b.y, w: g.w, h: g.h }));
+      const rects = Object.values(geo).map((g) => ({ x: g.b.x, y: g.b.y, w: g.w, h: g.h, bottom: g.bottom }));
       const routes = smart ? R.route(list.map((x) => x.ends), rects) : list.map((x) => R.simple(...x.ends));
       list.forEach(({ w }, i) => {
         const d = R.path(routes[i], routes.filter((_, j) => j !== i));
@@ -160,7 +174,7 @@
       const pic = hasImage(b) ? picture(b) : null;
       if (pic) {
         // the block's picture, between its pin columns; an <image> runs nothing
-        const img = el("image", { x: (g.w - IMG) / 2, y: HEAD + PAD, width: IMG, height: g.h - HEAD - PAD * 2,
+        const img = el("image", { x: (g.w - IMG) / 2, y: HEAD + PAD, width: IMG, height: g.body - HEAD - PAD * 2,
           href: pic.href, preserveAspectRatio: "xMidYMid meet", class: "hw-img" }, part);
         el("title", {}, img).textContent = pic.credit;
       }
@@ -171,8 +185,13 @@
         const a = g.at[p.id];
         const pin = el("g", { class: `hw-pin role-${p.role || "none"}`, "data-pin": p.id, "data-block": b.id }, part);
         el("circle", { cx: a.x, cy: a.y, r: 5 }, pin);
-        const label = el("text", { x: a.x - a.side * 9, y: a.y + 4, "text-anchor": a.side < 0 ? "start" : "end", class: "hw-pinname" }, pin);
-        label.textContent = p.name.length > 12 ? p.name.slice(0, 11) + "…" : p.name;
+        if (a.side) {
+          const label = el("text", { x: a.x - a.side * 9, y: a.y + 4, "text-anchor": a.side < 0 ? "start" : "end", class: "hw-pinname" }, pin);
+          label.textContent = p.name.length > 12 ? p.name.slice(0, 11) + "…" : p.name;
+        } else {                                                      // a bottom pin's name reads up from it
+          const label = el("text", { x: a.x + 4, y: a.y - 9, transform: `rotate(-90 ${a.x + 4} ${a.y - 9})`, class: "hw-pinname" }, pin);
+          label.textContent = p.name.length > 9 ? p.name.slice(0, 8) + "…" : p.name;
+        }
         const reach = data.wires.filter((w) => w.ends.some((e) => e.pin === p.id))
           .map((w) => w.ends.find((e) => e.pin !== p.id)).map((e) => `${geo[e.block]?.b.name ?? e.block} ${geo[e.block]?.b.pins.find((x) => x.id === e.pin)?.name ?? ""}`);
         el("title", {}, pin).textContent = `${p.name} (${p.n})${p.role ? " · " + t(`role.${p.role}`) : ""}${reach.length ? " → " + reach.join(", ") : ""}`;
@@ -252,7 +271,23 @@
         await reload();
       } else status(t("hw.hint"));
     }));
+    // rest on a part for a second: its card (not while dragging or wiring)
+    let hover = null;
+    const unhover = () => { clearTimeout(hover); hover = null; closeCard(); };
+    partsG.querySelectorAll(".hw-part").forEach((part) => {
+      part.addEventListener("pointerenter", (ev) => {
+        unhover();
+        const at = { x: ev.clientX, y: ev.clientY };
+        part.onpointermove = (e) => { at.x = e.clientX; at.y = e.clientY; };
+        hover = setTimeout(() => {
+          if (!C.dragging && !document.querySelector(".hw-menu")) blockCard(geo[part.dataset.block], at.x, at.y);
+        }, 1000);
+      });
+      part.addEventListener("pointerleave", unhover);
+    });
+    svg.addEventListener("pointerdown", unhover, true);
     svg.addEventListener("contextmenu", (ev) => {
+      unhover();
       const part = ev.target.closest(".hw-part");
       if (!part) return;
       ev.preventDefault();
@@ -326,7 +361,7 @@
     closeMenu();
     const wires = C.data.wires.filter((w) => w.ends.some((e) => e.block === b.id));
     const items = [
-      ["image", t("hw.m.image")], ["pins", t("hw.m.pins")], ["rename", t("hw.m.rename")],
+      ["image", t("hw.m.image")], ["pins", t("hw.m.pins")], ["notes", t("hw.m.notes")], ["rename", t("hw.m.rename")],
       ["unwire", t("hw.m.unwire", { n: wires.length }), !wires.length], ["off", t("hw.m.off")],
     ];
     const menu = document.createElement("div");
@@ -345,6 +380,7 @@
       closeMenu();
       if (k === "image") imageDialog(b);
       else if (k === "pins") pinsDialog(b);
+      else if (k === "notes") notesDialog(b);
       else if (k === "rename") renameDialog(b);
       else if (k === "off") { if (await api("POST", `${C.base}/canvas/unplace`, { block: b.id })) { C.sel = null; await reload(); } }
       else if (k === "unwire") {
@@ -410,13 +446,16 @@
     });
   }
 
-  /** A block's pins as lines: "11 GPIO17 signal". */
+  /** A block's pins in three boxes, left, right and bottom, a line each:
+   *  "11 GPIO17 signal". On its side a pin goes where it is listed. */
   function pinsDialog(b) {
     if (!b) return;
-    const text = b.pins.map((p) => `${p.n} ${p.name}${p.role ? " " + p.role : ""}`).join("\n");
+    const now = sides(b.pins);
+    const box = (k) => `<label class="pins-side">${esc(t(`hw.side.${k}`))}
+      <textarea name="${k}" rows="12" spellcheck="false">${esc(now[k].map((p) => `${p.n} ${p.name}${p.role ? " " + p.role : ""}`).join("\n"))}</textarea></label>`;
     core.dialog(t("hw.pinsOf", { name: b.name }), `
       <p class="note">${esc(t("hw.pinsHint"))}</p>
-      <textarea name="pins" rows="14" spellcheck="false">${esc(text)}</textarea>
+      <div class="pins-sides">${SIDES.map(box).join("")}</div>
       <div class="actions"><button value="cancel" formnovalidate>${esc(t("model.cancel"))}</button>
         <button value="ok" class="primary">${esc(t("model.save"))}</button></div>`, (form, dlg) => {
       form.onsubmit = async (ev) => {
@@ -424,15 +463,64 @@
         if (ev.submitter && ev.submitter.value === "cancel") return;
         ev.preventDefault(); dlg.close();
         const roles = ["power", "ground", "signal", "audio", "video", "data"];
-        const pins = form.querySelector('[name="pins"]').value.split("\n").map((l) => l.trim()).filter(Boolean).map((l, i) => {
-          const parts = l.split(/\s+/);
-          const n = /^\d+$/.test(parts[0]) ? Number(parts.shift()) : i + 1;
+        const lines = SIDES.flatMap((side) => form.querySelector(`[name="${side}"]`).value.split("\n")
+          .map((l) => l.trim()).filter(Boolean).map((l) => ({ side, parts: l.split(/\s+/) })));
+        let next = Math.max(0, ...lines.map((x) => (/^\d+$/.test(x.parts[0]) ? Number(x.parts[0]) : 0))) + 1;
+        const pins = lines.map(({ side, parts }) => {
+          const n = /^\d+$/.test(parts[0]) ? Number(parts.shift()) : next++;   // a line with no number takes the next
           const role = roles.includes((parts[parts.length - 1] || "").toLowerCase()) ? parts.pop().toLowerCase() : "";
-          return { n, name: parts.join(" ") || String(n), role };
+          return { n, name: parts.join(" ") || String(n), role, side };
         });
         if (await api("POST", `${C.base}/canvas/pins`, { block: b.id, pins })) await reload();
       };
     });
+  }
+
+  /** A block's notes; "Ask the agent" also writes them into the chat as a request. */
+  function notesDialog(b) {
+    if (!b) return;
+    core.dialog(t("hw.notesFor", { name: b.name }), `
+      <p class="note">${esc(t("hw.notesHint"))}</p>
+      <textarea name="notes" rows="8" maxlength="1000">${esc(b.notes || "")}</textarea>
+      <div class="actions"><button value="cancel" formnovalidate>${esc(t("model.cancel"))}</button>
+        <button value="ask">${esc(t("hw.notesAsk"))}</button>
+        <button value="ok" class="primary">${esc(t("model.save"))}</button></div>`, (form, dlg) => {
+      form.onsubmit = async (ev) => {
+        form.onsubmit = null;
+        const v = ev.submitter && ev.submitter.value;
+        if (!v || v === "cancel") return;
+        ev.preventDefault(); dlg.close();
+        const notes = form.querySelector('[name="notes"]').value.trim();
+        if (notes !== (b.notes || "") && !(await api("POST", `${C.base}/canvas/notes`, { block: b.id, notes }))) return;
+        if (v === "ask") ask(t("hw.notesRequest", { name: b.name, notes: notes || t("hw.noNotes") }));
+        await reload();
+      };
+    });
+  }
+
+  /** A part's card, after resting on it: its notes, and its pins by side. */
+  function blockCard(g, x, y) {
+    closeCard();
+    if (!g) return;
+    const b = g.b, by = sides(b.pins);
+    const card = document.createElement("div");
+    card.className = "hw-card";
+    card.setAttribute("role", "tooltip");
+    const pic = hasImage(b) && picture(b);
+    card.innerHTML = `<div class="hw-card__title">${esc(b.name)}${b.supply ? ` <small>${esc(t(`supply.${b.supply}`))}</small>` : ""}</div>
+      ${b.notes ? `<p class="hw-card__notes">${esc(b.notes)}</p>` : `<p class="note">${esc(t("hw.noNotesHint"))}</p>`}
+      <dl>${SIDES.filter((k) => by[k].length).map((k) => `<dt>${esc(t(`hw.side.${k}`))}</dt>
+        <dd>${by[k].map((p) => esc(`${p.n} ${p.name}`)).join(" · ")}</dd>`).join("")}</dl>
+      ${pic ? `<p class="note">${esc(pic.credit)}</p>` : ""}`;
+    (document.fullscreenElement || document.body).appendChild(card);
+    const r = card.getBoundingClientRect();
+    card.style.left = `${Math.max(8, Math.min(x + 14, innerWidth - r.width - 8))}px`;
+    card.style.top = `${Math.max(8, Math.min(y + 14, innerHeight - r.height - 8))}px`;
+    C.card = card;
+  }
+  function closeCard() {
+    if (C.card) C.card.remove();
+    C.card = null;
   }
 
   /** Where a block's picture is served from, and its credit (ADR-0021). */
@@ -544,10 +632,15 @@
 
   /** The agent draws: its request is written into the chat box; the person adds to it and asks. */
   function askAgent(b) {
+    ask(t("hw.agentRequest", { name: b.name, n: b.pins.length }));
+  }
+
+  /** A request written into the chat box, for the person to finish and send. */
+  function ask(text) {
     const box = document.getElementById("edge-chat");
     const input = box && box.querySelector(".edge-chat__ask textarea");
     if (!input) { core.toast(t("hw.agentNoChat")); return; }
-    input.value = t("hw.agentRequest", { name: b.name, n: b.pins.length });
+    input.value = text;
     input.dispatchEvent(new Event("input", { bubbles: true }));
     input.focus();
     input.setSelectionRange(input.value.length, input.value.length);

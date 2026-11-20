@@ -64,7 +64,7 @@ def with_ports(pins: List[Dict[str, Any]], known: List[Dict[str, Any]]) -> List[
         n = k["n"] if k["n"] not in used else nxt
         used.add(n)
         nxt = max(used) + 1
-        out.append({**k, "n": n})
+        out.append({"side": "bottom", **k, "n": n})              # a board's ports below it
     return sorted(out, key=lambda p: p["n"])
 
 

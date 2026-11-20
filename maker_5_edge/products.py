@@ -74,6 +74,7 @@ KINDS = {"block": (M5.Block, "b"), "module": (M5.SoftwareModule, "m"),
 # the hardware canvas and a BOM's supply (ADR-0014)
 PIN_ROLES = {"power": M5.PinPower, "ground": M5.PinGround, "signal": M5.PinSignal,
              "audio": M5.PinAudio, "video": M5.PinVideo, "data": M5.PinData}
+PIN_SIDES = ("left", "right", "bottom")
 SUPPLY = {"there": M5.SupplyThere, "in-hand": M5.SupplyInHand, "to-buy": M5.SupplyToBuy}
 COLOR = re.compile(r"^(#[0-9a-fA-F]{6}|[a-z]{3,20})$")
 MAX_PINS = 80
@@ -429,6 +430,15 @@ class Products:
         self._change(p, apply)
         return {"removed": item}
 
+    def notes(self, p: str, block: str, notes: str) -> Dict:
+        """A block's notes (its schema:description, as in the BOM): what it is for,
+        how it is wired, what to check. Empty removes them."""
+        notes = str(notes or "")
+        if len(notes) > 1000:
+            raise ValueError("notes are at most 1000 characters")
+        self._change(p, lambda g: self._describe(g, self._find(g, block, "block"), notes, None, None, None))
+        return {"id": block, "notes": notes.strip()}
+
     def describe(self, p: str, item: str, description: Optional[str] = None, supply: Optional[str] = None,
                  version: Optional[str] = None, runs_on: Optional[str] = None) -> Dict:
         """What a BOM says about a block or module (ADR-0014): a note, whether
@@ -476,8 +486,9 @@ class Products:
             for pin in g.subjects(M5.pinOf, b):
                 role = g.value(pin, M5.pinRole)
                 out.append({"id": _local(pin), "n": int(g.value(pin, M5.pinNumber) or 0), "name": _name(g, pin),
-                            "role": next((k for k, v in PIN_ROLES.items() if v == role), "")})
-            return sorted(out, key=lambda x: x["n"])
+                            "role": next((k for k, v in PIN_ROLES.items() if v == role), ""),
+                            "side": str(g.value(pin, M5.pinSide) or ""), "place": int(g.value(pin, M5.pinPlace) or 0)})
+            return sorted(out, key=lambda x: x["n"])                       # the canvas sorts a side by place
 
         blocks = []
         for b in sorted(set(g.subjects(RDF.type, M5.Block)), key=lambda n: _name(g, n).lower()):
@@ -489,7 +500,8 @@ class Products:
                            "x": None if x is None else int(x), "y": None if y is None else int(y),
                            "supply": next((k for k, v in SUPPLY.items() if v == supply), ""),
                            "article": _local(a) if a is not None else "", "pins": pins(b),
-                           "fritzing": str(g.value(b, M5.fritzingPart) or ""), "image": _image_of(g, b)})
+                           "fritzing": str(g.value(b, M5.fritzingPart) or ""), "image": _image_of(g, b),
+                           "notes": str(g.value(b, SCHEMA.description) or "")})
         wires = []
         for w in sorted(set(g.subjects(RDF.type, M5.Wire)), key=str):
             ends = sorted(g.objects(w, M5.wireEnd), key=str)
@@ -534,6 +546,8 @@ class Products:
                     role = PIN_ROLES.get(str(pin.get("role") or "").lower())
                     if role is not None:
                         g.add((node, M5.pinRole, role))
+                    if pin.get("side") in PIN_SIDES:
+                        g.add((node, M5.pinSide, Literal(pin["side"])))
         self._change(p, apply)
         return {"id": block, "x": x, "y": y}
 
@@ -588,7 +602,12 @@ class Products:
             if n in clean:
                 raise ValueError(f"pin {n} is there twice")
             role = str(pin.get("role") or "").strip().lower()
-            clean[n] = {"name": name, "role": _key(role, PIN_ROLES, "a pin's role") if role else None}
+            side = str(pin.get("side") or "").strip().lower()
+            if side and side not in PIN_SIDES:
+                raise ValueError(f"a pin's side is {', '.join(PIN_SIDES)}, not {side}")
+            # its place: the order the pins are listed in, within their side
+            clean[n] = {"name": name, "role": _key(role, PIN_ROLES, "a pin's role") if role else None, "side": side or None,
+                        "place": sum(1 for v in clean.values() if v["side"] == (side or None)) + 1}
         if len(clean) > MAX_PINS:
             raise ValueError(f"at most {MAX_PINS} pins on a block")
         return clean
@@ -610,6 +629,11 @@ class Products:
             g.remove((pin, M5.pinRole, None))
             if v["role"] is not None:
                 g.add((pin, M5.pinRole, v["role"]))
+            g.remove((pin, M5.pinSide, None))
+            g.remove((pin, M5.pinPlace, None))
+            if v.get("side"):
+                g.add((pin, M5.pinSide, Literal(v["side"])))
+                g.add((pin, M5.pinPlace, Literal(v["place"], datatype=XSD.integer)))
 
     def _pin(self, g: Graph, pin: str) -> URIRef:
         n = _iri("pin", pin)

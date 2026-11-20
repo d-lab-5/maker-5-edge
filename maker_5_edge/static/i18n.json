@@ -180,7 +180,7 @@
   "hw.wire": "Wire",
   "hw.unwire": "Remove the wire",
   "hw.pinsOf": "Pins of {name}",
-  "hw.pinsHint": "One pin a line: number, name, and a role (power, ground, signal, audio, video, data). A wired pin cannot be dropped.",
+  "hw.pinsHint": "A box for each side of the part: left and right top to bottom, the bottom left to right, as you list them. One pin a line: number, name, and a role (power, ground, signal, audio, video, data). A wired pin cannot be dropped.",
   "help.hw.color": "The colour of the next wire you draw.",
   "help.hw.zoom": "Zoom out or in; the wheel does too.",
   "help.hw.fit": "Show every part.",
@@ -346,7 +346,17 @@
   "hw.m.rename": "Rename…",
   "hw.m.unwire": "Remove its wires ({n})",
   "hw.m.off": "Take off the canvas",
-  "hw.newName": "Name"
+  "hw.newName": "Name",
+  "hw.side.left": "Left",
+  "hw.side.right": "Right",
+  "hw.side.bottom": "Bottom",
+  "hw.m.notes": "Notes…",
+  "hw.notesFor": "Notes on {name}",
+  "hw.notesHint": "What the block is for, how it is wired, what to check. They are shown when you rest on the part, and the agent reads them.",
+  "hw.notesAsk": "Save and ask the agent",
+  "hw.notesRequest": "About the block \"{name}\": {notes}\n\nWith these notes, ",
+  "hw.noNotes": "(no notes yet)",
+  "hw.noNotesHint": "No notes yet: right-click the part, Notes…"
  },
  "de": {
   "core.theme": "Design",
@@ -529,7 +539,7 @@
   "hw.wire": "Leitung",
   "hw.unwire": "Leitung entfernen",
   "hw.pinsOf": "Pins von {name}",
-  "hw.pinsHint": "Ein Pin je Zeile: Nummer, Name und eine Rolle (power, ground, signal, audio, video, data). Ein verbundener Pin kann nicht wegfallen.",
+  "hw.pinsHint": "Ein Feld je Seite des Bauteils: links und rechts von oben nach unten, unten von links nach rechts, wie du sie aufführst. Ein Pin je Zeile: Nummer, Name und eine Rolle (power, ground, signal, audio, video, data). Ein verbundener Pin kann nicht wegfallen.",
   "help.hw.color": "Die Farbe der nächsten Leitung.",
   "help.hw.zoom": "Heraus- oder hineinzoomen; das Mausrad geht auch.",
   "help.hw.fit": "Alle Teile zeigen.",
@@ -695,7 +705,17 @@
   "hw.m.rename": "Umbenennen…",
   "hw.m.unwire": "Seine Drähte entfernen ({n})",
   "hw.m.off": "Vom Canvas nehmen",
-  "hw.newName": "Name"
+  "hw.newName": "Name",
+  "hw.side.left": "Links",
+  "hw.side.right": "Rechts",
+  "hw.side.bottom": "Unten",
+  "hw.m.notes": "Notizen…",
+  "hw.notesFor": "Notizen zu {name}",
+  "hw.notesHint": "Wofür der Block da ist, wie er verdrahtet ist, was zu prüfen ist. Sie erscheinen, wenn du auf dem Bauteil verweilst, und der Agent liest sie.",
+  "hw.notesAsk": "Speichern und den Agenten fragen",
+  "hw.notesRequest": "Zum Block „{name}“: {notes}\n\nMit diesen Notizen ",
+  "hw.noNotes": "(noch keine Notizen)",
+  "hw.noNotesHint": "Noch keine Notizen: Rechtsklick auf das Bauteil, Notizen…"
  },
  "fr": {
   "core.theme": "thème",
@@ -878,7 +898,7 @@
   "hw.wire": "Fil",
   "hw.unwire": "Retirer le fil",
   "hw.pinsOf": "Broches de {name}",
-  "hw.pinsHint": "Une broche par ligne : numéro, nom et un rôle (power, ground, signal, audio, video, data). Une broche reliée ne peut pas disparaître.",
+  "hw.pinsHint": "Une zone par côté de la pièce : gauche et droite de haut en bas, le bas de gauche à droite, dans l'ordre où vous les listez. Une broche par ligne : numéro, nom et un rôle (power, ground, signal, audio, video, data). Une broche reliée ne peut pas disparaître.",
   "help.hw.color": "La couleur du prochain fil.",
   "help.hw.zoom": "Zoom arrière ou avant ; la molette aussi.",
   "help.hw.fit": "Afficher toutes les pièces.",
@@ -1044,7 +1064,17 @@
   "hw.m.rename": "Renommer…",
   "hw.m.unwire": "Retirer ses fils ({n})",
   "hw.m.off": "Retirer du canevas",
-  "hw.newName": "Nom"
+  "hw.newName": "Nom",
+  "hw.side.left": "Gauche",
+  "hw.side.right": "Droite",
+  "hw.side.bottom": "Bas",
+  "hw.m.notes": "Notes…",
+  "hw.notesFor": "Notes sur {name}",
+  "hw.notesHint": "À quoi sert le bloc, comment il est câblé, ce qu'il faut vérifier. Elles s'affichent quand vous restez sur la pièce, et l'agent les lit.",
+  "hw.notesAsk": "Enregistrer et demander à l'agent",
+  "hw.notesRequest": "À propos du bloc « {name} » : {notes}\n\nAvec ces notes, ",
+  "hw.noNotes": "(pas encore de notes)",
+  "hw.noNotesHint": "Pas encore de notes : clic droit sur la pièce, Notes…"
  },
  "edge": {
   "de": {

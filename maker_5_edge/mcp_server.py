@@ -276,8 +276,9 @@ def import_bom(product: str, file: str = "", text: str = "") -> dict:
 
 @server.tool()
 def canvas(product: str) -> dict:
-    """The hardware canvas: each block's place and pins (ids <block>.<n>,
-    names like GPIO17, roles), and the wires between pins."""
+    """The hardware canvas: each block's place, notes and pins (ids
+    <block>.<n>, names like GPIO17, roles, side left/right/bottom and place
+    on it), and the wires between pins."""
     return _get(_p(product) + "/canvas")
 
 
@@ -432,9 +433,18 @@ def wire(product: str, pin_from: str, pin_to: str, color: str = "", interface: s
 
 @server.tool()
 def set_pins(product: str, block: str, pins: List[Dict]) -> dict:
-    """Propose a block's pins: [{n, name, role}] with role power, ground,
-    signal, audio, video or data. A wired pin cannot be dropped."""
+    """Propose a block's pins: [{n, name, role, side}] with role power, ground,
+    signal, audio, video or data, and side left, right or bottom (on a side
+    the pins follow their numbers; without one a long header has its odd pins
+    left and even right). A wired pin cannot be dropped."""
     return act(f"Set {len(pins)} pins on {block}", "POST", _p(product) + "/canvas/pins", {"block": block, "pins": pins})
+
+
+@server.tool()
+def set_notes(product: str, block: str, notes: str) -> dict:
+    """Propose a block's notes (what it is for, how it is wired, what to
+    check), at most 1000 characters; empty removes them. canvas() gives them."""
+    return act(f"Notes on {block}", "POST", _p(product) + "/canvas/notes", {"block": block, "notes": notes})
 
 
 @server.tool()

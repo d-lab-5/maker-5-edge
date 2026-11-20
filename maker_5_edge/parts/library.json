@@ -145,32 +145,38 @@
     {
      "n": 27,
      "name": "USB 1",
-     "role": "data"
+     "role": "data",
+     "side": "bottom"
     },
     {
      "n": 28,
      "name": "USB 2",
-     "role": "data"
+     "role": "data",
+     "side": "bottom"
     },
     {
      "n": 29,
      "name": "Ethernet",
-     "role": "data"
+     "role": "data",
+     "side": "bottom"
     },
     {
      "n": 30,
      "name": "Audio out",
-     "role": "audio"
+     "role": "audio",
+     "side": "bottom"
     },
     {
      "n": 31,
      "name": "Video out",
-     "role": "video"
+     "role": "video",
+     "side": "bottom"
     },
     {
      "n": 32,
      "name": "5V in (micro USB)",
-     "role": "power"
+     "role": "power",
+     "side": "bottom"
     }
    ],
    "fritzing": "core/Raspberry_Pi_B(rev2).fzp"

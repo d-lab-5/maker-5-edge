@@ -8,7 +8,10 @@
  * Short wires go first, so they stay straight. Where a horizontal stretch
  * still crosses a vertical one, it hops over it in a half circle.
  *
- *   window.wireRoute.route(ends, rects) → [[{x, y}, …] per wire]
+ * A pin's side is -1 (left), 1 (right) or 0 (bottom: its stub goes down).
+ *
+ *   window.wireRoute.route(ends, rects) → [[{x, y}, …] per wire]; a rect with
+ *     bottom pins keeps the room below it too
  *   window.wireRoute.path(points, others) → an SVG path with the hops
  */
 (() => {
@@ -18,8 +21,10 @@
   const BEND = 4, ALONG = 25, ACROSS = 2, MAX_EXPAND = 250000;
   const DX = [1, 0, -1, 0], DY = [0, 1, 0, -1];          // right, down, left, up
 
+  /** Which way a pin leaves its part: [dx, dy]. */
+  const out = (p) => (p.side ? [p.side, 0] : [0, 1]);
   /** Point a pin's stub reaches: straight out of the part, on the grid. */
-  const stub = (p) => ({ x: Math.round((p.x + p.side * STUB) / G) * G, y: Math.round(p.y / G) * G });
+  const stub = (p) => { const [dx, dy] = out(p); return { x: Math.round((p.x + dx * STUB) / G) * G, y: Math.round((p.y + dy * STUB) / G) * G }; };
 
   /** A small binary heap of [priority, value]. */
   function Heap() { this.a = []; }
@@ -43,7 +48,8 @@
 
   /** The simple way, when there is no grid route: out, across, in. */
   function simple(a, b) {
-    const sa = { x: a.x + a.side * STUB, y: a.y }, sb = { x: b.x + b.side * STUB, y: b.y }, mx = (sa.x + sb.x) / 2;
+    const [ax, ay] = out(a), [bx, by] = out(b);
+    const sa = { x: a.x + ax * STUB, y: a.y + ay * STUB }, sb = { x: b.x + bx * STUB, y: b.y + by * STUB }, mx = (sa.x + sb.x) / 2;
     return [{ x: a.x, y: a.y }, sa, { x: mx, y: sa.y }, { x: mx, y: sb.y }, sb, { x: b.x, y: b.y }];
   }
 
@@ -74,7 +80,7 @@
     const blocked = new Uint8Array(cols * rows);
     for (const r of rects) {
       const i0 = Math.ceil((r.x - SIDE - x0) / G), i1 = Math.floor((r.x + r.w + SIDE - x0) / G);
-      const j0 = Math.ceil((r.y - CLEAR - y0) / G), j1 = Math.floor((r.y + r.h + CLEAR - y0) / G);
+      const j0 = Math.ceil((r.y - CLEAR - y0) / G), j1 = Math.floor((r.y + r.h + (r.bottom ? SIDE : CLEAR) - y0) / G);
       for (let j = Math.max(0, j0); j <= Math.min(rows - 1, j1); j++)
         for (let i = Math.max(0, i0); i <= Math.min(cols - 1, i1); i++) blocked[j * cols + i] = 1;
     }
@@ -89,7 +95,7 @@
       const sa = stub(a), sb = stub(b);
       const si = (sa.x - x0) / G, sj = (sa.y - y0) / G, gi = (sb.x - x0) / G, gj = (sb.y - y0) / G;
       const start = sj * cols + si, goal = gj * cols + gi;
-      const found = astar(start, goal, a.side > 0 ? 0 : 2, cols, rows, blocked, usedH, usedV);
+      const found = astar(start, goal, a.side > 0 ? 0 : a.side < 0 ? 2 : 1, cols, rows, blocked, usedH, usedV);
       if (!found) { out[k] = simple(a, b); continue; }
       for (let n = 1; n < found.length; n++) {
         const p = found[n - 1], q = found[n];
@@ -97,24 +103,34 @@
         (Math.abs(p - q) === 1 ? usedH : usedV)[q] = 1;
       }
       const pts = found.map((c) => ({ x: x0 + (c % cols) * G, y: y0 + Math.floor(c / cols) * G }));
-      out[k] = fit(corners([{ x: a.x, y: sa.y }, ...pts, { x: b.x, y: sb.y }]), a, b);
+      const at = (p, s) => (p.side ? { x: p.x, y: s.y } : { x: s.x, y: p.y });   // the pin, on the stub's line
+      out[k] = fit(corners([at(a, sa), ...pts, at(b, sb)]), a, b);
     }
     return out;
   }
 
   /** The grid route, lined up on the pins themselves: a pin is rarely on the
-   *  grid, so the first and last horizontal runs move to the pin's height. */
+   *  grid, so the first and last runs move onto the pin (a side pin's height,
+   *  a bottom pin's x). */
   function fit(pts, a, b) {
     if (pts.length === 2) {                                         // one straight run: a jog halfway if the pins differ
+      if (a.x === b.x || a.y === b.y) return corners([{ x: a.x, y: a.y }, { x: b.x, y: b.y }]);
+      if (!a.side && !b.side) {
+        const my = Math.round((a.y + b.y) / 2 / G) * G;
+        return corners([{ x: a.x, y: a.y }, { x: a.x, y: my }, { x: b.x, y: my }, { x: b.x, y: b.y }]);
+      }
+      if (!a.side || !b.side) return corners([{ x: a.x, y: a.y }, a.side ? { x: b.x, y: a.y } : { x: a.x, y: b.y }, { x: b.x, y: b.y }]);
       const mx = Math.round((a.x + b.x) / 2 / G) * G;
-      return corners(a.y === b.y ? [{ x: a.x, y: a.y }, { x: b.x, y: b.y }]
-        : [{ x: a.x, y: a.y }, { x: mx, y: a.y }, { x: mx, y: b.y }, { x: b.x, y: b.y }]);
+      return corners([{ x: a.x, y: a.y }, { x: mx, y: a.y }, { x: mx, y: b.y }, { x: b.x, y: b.y }]);
     }
     const n = pts.length - 1;
-    pts[0].y = a.y;
-    if (pts[1].x !== pts[0].x) pts[1].y = a.y;                    // the first run is horizontal: at the pin's height
-    pts[n].y = b.y;
-    if (pts[n - 1].x !== pts[n].x) pts[n - 1].y = b.y;
+    const onto = (i, j, p) => {                                     // pts[i] is the pin; pts[j] ends its first run
+      const k = p.side ? "y" : "x", o = p.side ? "x" : "y";
+      pts[i][k] = p[k];
+      if (pts[j][o] !== pts[i][o]) pts[j][k] = p[k];
+    };
+    onto(0, 1, a);
+    onto(n, n - 1, b);
     return corners(pts);
   }
 

@@ -64,7 +64,14 @@ a block gives it a picture (ADR-0021):
 - **By the agent:** the chat draws it as SVG with the `part-image` skill
   (`maker_5_edge/skill/part-image.md`); each pin is checked before it is kept.
 
-A library part brings its pins; a board's ports stay. Pins,
+A library part brings its pins; a board's ports stay. **Pictures** in the canvas bar hides them all.
+
+Wires find their own way around the parts (`static/route.js`, and
+`maker_5_edge/route.py` for `hardware/wiring.svg`, the same rules): on a grid,
+few bends, apart from each other, and a half-circle hop where two cross.
+Click a part to select it: it is lit in the list and its wires stand out.
+Right-click a part, or its name in the list, for its menu: picture, pins,
+rename, remove its wires, or take it off the canvas (its pins and wires stay). Pins,
 wires and positions are in the model, so they sync and the chat can read and
 propose them (ADR-0014 in maker-5-shared).
 

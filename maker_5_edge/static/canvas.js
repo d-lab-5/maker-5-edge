@@ -7,6 +7,8 @@
  *   drag a part        moves it (saved when you let go: one revision)
  *   click a pin, then another     a wire, in the colour chosen above
  *   click a wire       its colour, or remove it
+ *   click a part       selects it: lit in the list, its wires lit too
+ *   right-click a part its menu: picture, pins, rename, off the canvas, unwire
  *   drag the background, the wheel, − / +    pan and zoom
  */
 (() => {
@@ -18,7 +20,9 @@
   const W = 190, HEAD = 28, ROW = 17, PAD = 8, GRID = 10;
   const COLORS = ["red", "black", "yellow", "white", "blue", "green", "orange", "purple"];
   const ROLE_COLOR = { power: "red", ground: "black", signal: "blue", audio: "purple", video: "orange", data: "green" };
-  const C = { base: "", ws: "", data: null, key: "", view: { x: -40, y: -40, k: 1 }, from: null, color: "yellow", dragging: false };
+  const C = { base: "", ws: "", data: null, key: "", view: { x: -40, y: -40, k: 1 }, from: null, color: "yellow", dragging: false,
+    sel: null, pics: (() => { try { return localStorage.getItem("hw-pics") !== "off"; } catch { return true; } })() };
+  const R = window.wireRoute;
 
   const el = (tag, attrs = {}, parent) => {
     const n = document.createElementNS(NS, tag);
@@ -30,8 +34,8 @@
 
   /** Which side and row a pin sits on: a long header odd left and even right,
    *  as it is on the board; a small part its first half left. */
-  const IMG = 110;                                  // room for a block's picture
-  const hasImage = (b) => !!b.fritzing || (b.image && b.image.kind !== "none");
+  const IMG = 70;                                   // room for a block's picture, between the pin names
+  const hasImage = (b) => C.pics && (!!b.fritzing || (b.image && b.image.kind !== "none"));
   function layout(b) {
     const pins = b.pins;
     const w = hasImage(b) ? W + IMG : W;
@@ -42,7 +46,8 @@
     const at = {};
     left.forEach((p, i) => { at[p.id] = { x: 0, y: HEAD + PAD + i * ROW + ROW / 2, side: -1 }; });
     right.forEach((p, i) => { at[p.id] = { x: w, y: HEAD + PAD + i * ROW + ROW / 2, side: 1 }; });
-    return { at, w, h: Math.max(HEAD + PAD * 2 + rows * ROW, hasImage(b) ? HEAD + IMG + PAD * 2 : 0) };
+    // the picture fits the pins' height: a block is never taller for it (three rows at least)
+    return { at, w, h: HEAD + PAD * 2 + Math.max(rows, hasImage(b) ? 3 : 1) * ROW };
   }
 
   async function api(method, path, payload) {
@@ -73,6 +78,7 @@
         <button class="hw-zoom" data-z="-1" data-help="help.hw.zoom">−</button>
         <button class="hw-zoom" data-z="1" data-help="help.hw.zoom">+</button>
         <button class="hw-fit" data-help="help.hw.fit">${esc(t("hw.fit"))}</button>
+        <button class="hw-pics${C.pics ? " is-on" : ""}" aria-pressed="${C.pics}" data-help="help.hw.pics">${esc(t("hw.pics"))}</button>
         <button class="hw-full" data-help="help.hw.full">${esc(document.fullscreenElement ? t("hw.unfull") : t("hw.full"))}</button>
         <span class="hw-status note">${esc(t("hw.hint"))}</span>
       </div>
@@ -82,7 +88,8 @@
           ${loose.length ? `<ul>${loose.map((b) => `<li><span>${esc(b.name)}</span>
             <button data-place="${esc(b.id)}" data-help="help.hw.place">${esc(t("hw.place"))}</button></li>`).join("")}</ul>`
             : `<p class="note">${esc(data.blocks.length ? t("hw.allPlaced") : t("hw.noBlocks"))}</p>`}
-          ${placed.length ? `<h3>${esc(t("hw.placed"))}</h3><ul>${placed.map((b) => `<li><span>${esc(b.name)}</span>
+          ${placed.length ? `<h3>${esc(t("hw.placed"))}</h3><ul>${placed.map((b) => `<li data-block="${esc(b.id)}" class="${b.id === C.sel ? "is-sel" : ""}">
+            <button type="button" class="linkish hw-pick" data-pick="${esc(b.id)}" data-help="help.hw.pick">${esc(b.name)}</button>
             <span><button data-fz="${esc(b.id)}" data-help="help.hw.image">${esc(t("hw.image"))}</button>
             <button data-pins="${esc(b.id)}" data-help="help.hw.pins">${esc(t("hw.pins"))}</button></span></li>`).join("")}</ul>` : ""}
           <p class="note">${esc(t("hw.wires", { n: data.wires.length }))}</p>
@@ -111,28 +118,46 @@
       return { x: g.b.x + a.x, y: g.b.y + a.y, side: a.side };
     };
 
-    function drawWires() {
+    // smart: routed around the parts (route.js); while a part is dragged, the quick way
+    function drawWires(smart = true) {
       wiresG.innerHTML = "";
-      for (const w of data.wires) {
-        const [a, b] = w.ends.map((e) => pinPoint(e.pin, e.block));
-        if (!a || !b) continue;
-        const ax = a.x + a.side * 18, bx = b.x + b.side * 18, mx = (ax + bx) / 2;
-        const d = `M${a.x},${a.y} H${ax} H${mx} V${b.y} H${bx} H${b.x}`;
+      const list = data.wires.map((w) => ({ w, ends: w.ends.map((e) => pinPoint(e.pin, e.block)) })).filter((x) => x.ends[0] && x.ends[1]);
+      const rects = Object.values(geo).map((g) => ({ x: g.b.x, y: g.b.y, w: g.w, h: g.h }));
+      const routes = smart ? R.route(list.map((x) => x.ends), rects) : list.map((x) => R.simple(...x.ends));
+      list.forEach(({ w }, i) => {
+        const d = R.path(routes[i], routes.filter((_, j) => j !== i));
+        const lit = C.sel && w.ends.some((e) => e.block === C.sel) ? " is-lit" : "";
         const role = (geo[w.ends[0].block]?.b.pins.find((p) => p.id === w.ends[0].pin) || {}).role;
         const color = w.color || ROLE_COLOR[role] || "gray";
         el("path", { d, class: "hw-wire-hit", "data-wire": w.id }, wiresG);
-        const path = el("path", { d, class: "hw-wire", stroke: color, "data-wire": w.id }, wiresG);
+        const path = el("path", { d, class: `hw-wire${lit}`, stroke: color, "data-wire": w.id }, wiresG);
         const names = w.ends.map((e) => `${geo[e.block]?.b.name ?? e.block} · ${geo[e.block]?.b.pins.find((p) => p.id === e.pin)?.name ?? e.pin}`);
         el("title", {}, path).textContent = names.join(" → ");
-      }
+      });
+      wiresG.querySelectorAll("path[data-wire]").forEach((p) => p.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        wireDialog(data.wires.find((w) => w.id === p.dataset.wire));
+      }));
+    }
+
+    /** One part selected: lit on the canvas and in the list, its wires lit, the rest dimmed. */
+    function select(id) {
+      C.sel = id && geo[id] ? id : null;
+      svg.classList.toggle("has-sel", !!C.sel);
+      partsG.querySelectorAll(".hw-part").forEach((x) => x.classList.toggle("is-sel", x.dataset.block === C.sel));
+      box.querySelectorAll(".hw-side li[data-block]").forEach((x) => x.classList.toggle("is-sel", x.dataset.block === C.sel));
+      const lit = new Set(data.wires.filter((w) => w.ends.some((e) => e.block === C.sel)).map((w) => w.id));
+      wiresG.querySelectorAll("path.hw-wire").forEach((x) => x.classList.toggle("is-lit", lit.has(x.dataset.wire)));
+      const li = C.sel && box.querySelector(`.hw-side li[data-block="${CSS.escape(C.sel)}"]`);
+      if (li) li.scrollIntoView({ block: "nearest" });
     }
 
     for (const g of Object.values(geo)) {
       const b = g.b;
-      const part = el("g", { class: `hw-part${b.supply === "to-buy" ? " to-buy" : ""}`, transform: `translate(${b.x},${b.y})`, "data-block": b.id }, partsG);
+      const part = el("g", { class: `hw-part${b.supply === "to-buy" ? " to-buy" : ""}${b.id === C.sel ? " is-sel" : ""}`, transform: `translate(${b.x},${b.y})`, "data-block": b.id }, partsG);
       el("rect", { width: g.w, height: g.h, rx: 6, class: "hw-body" }, part);
       el("rect", { width: g.w, height: HEAD, rx: 6, class: "hw-head" }, part);
-      const pic = picture(b);
+      const pic = hasImage(b) ? picture(b) : null;
       if (pic) {
         // the block's picture, between its pin columns; an <image> runs nothing
         const img = el("image", { x: (g.w - IMG) / 2, y: HEAD + PAD, width: IMG, height: g.h - HEAD - PAD * 2,
@@ -165,6 +190,7 @@
 
     // drag a part, or the background to pan
     svg.addEventListener("pointerdown", (ev) => {
+      if (ev.button !== 0) return;                                    // the right button opens the menu
       if (ev.target.closest(".hw-pin") || ev.target.closest("[data-wire]")) return;
       const part = ev.target.closest(".hw-part");
       const start = toWorld(ev);
@@ -178,17 +204,20 @@
           const p = toWorld(e);
           g.b.x = snap(from.x + p.x - start.x); g.b.y = snap(from.y + p.y - start.y);
           part.setAttribute("transform", `translate(${g.b.x},${g.b.y})`);
-          drawWires();
+          drawWires(false);
         } else {
           C.view.x = from.x - (e.clientX - sx) / C.view.k; C.view.y = from.y - (e.clientY - sy) / C.view.k;
           apply();
         }
       };
-      const up = async () => {
+      const up = async (e) => {
         svg.removeEventListener("pointermove", move);
         svg.removeEventListener("pointerup", up);
         C.dragging = false;
+        const still = Math.abs(e.clientX - sx) + Math.abs(e.clientY - sy) < 4;
+        if (still && e.button === 0) select(g ? g.b.id : null);      // a click, not a drag
         if (g && (g.b.x !== from.x || g.b.y !== from.y)) {
+          drawWires();
           if (await api("POST", `${C.base}/canvas/place`, { block: g.b.id, x: g.b.x, y: g.b.y })) C.key = "";
         }
       };
@@ -223,10 +252,13 @@
         await reload();
       } else status(t("hw.hint"));
     }));
-    svg.querySelectorAll("path[data-wire]").forEach((p) => p.addEventListener("click", (ev) => {
-      ev.stopPropagation();
-      wireDialog(data.wires.find((w) => w.id === p.dataset.wire));
-    }));
+    svg.addEventListener("contextmenu", (ev) => {
+      const part = ev.target.closest(".hw-part");
+      if (!part) return;
+      ev.preventDefault();
+      select(part.dataset.block);
+      blockMenu(geo[part.dataset.block].b, ev.clientX, ev.clientY);
+    });
     const escape = (ev) => {
       if (ev.key !== "Escape" || !C.from) return;
       C.from = null;
@@ -238,6 +270,28 @@
     document.addEventListener("keydown", escape);
 
     box.querySelector(".hw-color").onchange = (e) => { C.color = e.target.value; };
+    box.querySelector(".hw-pics").onclick = () => {
+      C.pics = !C.pics;
+      try { localStorage.setItem("hw-pics", C.pics ? "on" : "off"); } catch { /* a private window */ }
+      reload();
+    };
+    // a name in the list: select the part and bring it into view
+    box.querySelectorAll("[data-pick]").forEach((x) => x.onclick = () => {
+      const g = geo[x.dataset.pick];
+      if (!g) return;
+      const r = svg.getBoundingClientRect();
+      C.view.x = g.b.x + g.w / 2 - r.width / 2 / C.view.k;
+      C.view.y = g.b.y + g.h / 2 - r.height / 2 / C.view.k;
+      apply();
+      select(g.b.id);
+    });
+    box.querySelectorAll(".hw-side li[data-block]").forEach((li) => li.addEventListener("contextmenu", (ev) => {
+      const g = geo[li.dataset.block];
+      if (!g) return;
+      ev.preventDefault();
+      select(g.b.id);
+      blockMenu(g.b, ev.clientX, ev.clientY);
+    }));
     box.querySelectorAll(".hw-zoom").forEach((b) => b.onclick = () => {
       C.view.k = Math.min(3, Math.max(0.3, C.view.k * (b.dataset.z > 0 ? 1.2 : 1 / 1.2)));
       apply();
@@ -265,6 +319,74 @@
     });
     box.querySelectorAll("[data-pins]").forEach((b) => b.onclick = () => pinsDialog(data.blocks.find((x) => x.id === b.dataset.pins)));
     box.querySelectorAll("[data-fz]").forEach((b) => b.onclick = () => imageDialog(data.blocks.find((x) => x.id === b.dataset.fz)));
+  }
+
+  /** The right-click menu of a part. */
+  function blockMenu(b, x, y) {
+    closeMenu();
+    const wires = C.data.wires.filter((w) => w.ends.some((e) => e.block === b.id));
+    const items = [
+      ["image", t("hw.m.image")], ["pins", t("hw.m.pins")], ["rename", t("hw.m.rename")],
+      ["unwire", t("hw.m.unwire", { n: wires.length }), !wires.length], ["off", t("hw.m.off")],
+    ];
+    const menu = document.createElement("div");
+    menu.className = "hw-menu";
+    menu.setAttribute("role", "menu");
+    menu.innerHTML = `<div class="hw-menu__title">${esc(b.name)}</div>` + items.map(([k, label, off]) =>
+      `<button type="button" role="menuitem" data-m="${k}" ${off ? "disabled" : ""}>${esc(label)}</button>`).join("");
+    (document.fullscreenElement || document.body).appendChild(menu);
+    const r = menu.getBoundingClientRect();
+    menu.style.left = `${Math.min(x, innerWidth - r.width - 8)}px`;
+    menu.style.top = `${Math.min(y, innerHeight - r.height - 8)}px`;
+    menu.querySelector("button:not([disabled])").focus();
+    menu.onclick = async (ev) => {
+      const k = ev.target.closest("[data-m]")?.dataset.m;
+      if (!k) return;
+      closeMenu();
+      if (k === "image") imageDialog(b);
+      else if (k === "pins") pinsDialog(b);
+      else if (k === "rename") renameDialog(b);
+      else if (k === "off") { if (await api("POST", `${C.base}/canvas/unplace`, { block: b.id })) { C.sel = null; await reload(); } }
+      else if (k === "unwire") {
+        for (const w of wires) if (!(await api("DELETE", `${C.base}/items/${encodeURIComponent(w.id)}`))) break;
+        await reload();
+      }
+    };
+    C.menu = menu;
+    setTimeout(() => {
+      document.addEventListener("pointerdown", C.menuAway = (ev) => { if (!menu.contains(ev.target)) closeMenu(); }, true);
+      document.addEventListener("keydown", C.menuKey = (ev) => {
+        if (ev.key === "Escape") closeMenu();
+        if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
+          const all = [...menu.querySelectorAll("button:not([disabled])")];
+          const i = all.indexOf(document.activeElement);
+          all[(i + (ev.key === "ArrowDown" ? 1 : all.length - 1)) % all.length].focus();
+          ev.preventDefault();
+        }
+      });
+    });
+  }
+
+  function closeMenu() {
+    if (C.menu) C.menu.remove();
+    C.menu = null;
+    document.removeEventListener("pointerdown", C.menuAway || (() => {}), true);
+    document.removeEventListener("keydown", C.menuKey || (() => {}));
+  }
+
+  function renameDialog(b) {
+    core.dialog(t("hw.m.rename"), `
+      <label>${esc(t("hw.newName"))} <input name="name" required maxlength="200" value="${esc(b.name)}"></label>
+      <div class="actions"><button value="cancel" formnovalidate>${esc(t("model.cancel"))}</button>
+        <button value="ok" class="primary">${esc(t("model.save"))}</button></div>`, (form, dlg) => {
+      form.onsubmit = async (ev) => {
+        form.onsubmit = null;
+        if (!ev.submitter || ev.submitter.value !== "ok") return;
+        ev.preventDefault(); dlg.close();
+        const name = form.querySelector('[name="name"]').value.trim();
+        if (name && name !== b.name && await api("POST", `${C.base}/items/${encodeURIComponent(b.id)}/rename`, { name })) await reload();
+      };
+    });
   }
 
   function wireDialog(w) {

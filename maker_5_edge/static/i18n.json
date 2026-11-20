@@ -337,7 +337,16 @@
   "hw.imgSet.fritzing": "The part is on the block now.",
   "hw.imgSet.wokwi": "The part is on the block now.",
   "hw.agentNoChat": "Open the chat first: the agent draws there.",
-  "hw.agentRequest": "Draw a picture of the block \"{name}\" ({n} pins) with the part-image skill: look in the Fritzing and Wokwi libraries first, then draw it from its datasheet or my files. "
+  "hw.agentRequest": "Draw a picture of the block \"{name}\" ({n} pins) with the part-image skill: look in the Fritzing and Wokwi libraries first, then draw it from its datasheet or my files. ",
+  "hw.pics": "Pictures",
+  "help.hw.pics": "Show or hide the parts' pictures. Hidden, the parts are as small as their pins.",
+  "help.hw.pick": "Select the part and bring it into view. Right-click for its menu.",
+  "hw.m.image": "Picture…",
+  "hw.m.pins": "Pins…",
+  "hw.m.rename": "Rename…",
+  "hw.m.unwire": "Remove its wires ({n})",
+  "hw.m.off": "Take off the canvas",
+  "hw.newName": "Name"
  },
  "de": {
   "core.theme": "Design",
@@ -677,7 +686,16 @@
   "hw.imgSet.fritzing": "Das Bauteil ist jetzt am Block.",
   "hw.imgSet.wokwi": "Das Bauteil ist jetzt am Block.",
   "hw.agentNoChat": "Öffnen Sie zuerst den Chat: dort zeichnet der Agent.",
-  "hw.agentRequest": "Zeichne ein Bild des Blocks „{name}“ ({n} Pins) mit dem Skill part-image: schau zuerst in die Fritzing- und Wokwi-Bibliotheken, dann zeichne es nach Datenblatt oder meinen Dateien. "
+  "hw.agentRequest": "Zeichne ein Bild des Blocks „{name}“ ({n} Pins) mit dem Skill part-image: schau zuerst in die Fritzing- und Wokwi-Bibliotheken, dann zeichne es nach Datenblatt oder meinen Dateien. ",
+  "hw.pics": "Bilder",
+  "help.hw.pics": "Bilder der Bauteile zeigen oder ausblenden. Ausgeblendet sind die Bauteile so klein wie ihre Pins.",
+  "help.hw.pick": "Bauteil auswählen und ins Bild holen. Rechtsklick für sein Menü.",
+  "hw.m.image": "Bild…",
+  "hw.m.pins": "Pins…",
+  "hw.m.rename": "Umbenennen…",
+  "hw.m.unwire": "Seine Drähte entfernen ({n})",
+  "hw.m.off": "Vom Canvas nehmen",
+  "hw.newName": "Name"
  },
  "fr": {
   "core.theme": "thème",
@@ -1017,7 +1035,16 @@
   "hw.imgSet.fritzing": "La pièce est sur le bloc.",
   "hw.imgSet.wokwi": "La pièce est sur le bloc.",
   "hw.agentNoChat": "Ouvrez d'abord le chat : l'agent y dessine.",
-  "hw.agentRequest": "Dessine une image du bloc « {name} » ({n} broches) avec le skill part-image : cherche d'abord dans les bibliothèques Fritzing et Wokwi, puis dessine-la d'après sa fiche technique ou mes fichiers. "
+  "hw.agentRequest": "Dessine une image du bloc « {name} » ({n} broches) avec le skill part-image : cherche d'abord dans les bibliothèques Fritzing et Wokwi, puis dessine-la d'après sa fiche technique ou mes fichiers. ",
+  "hw.pics": "Images",
+  "help.hw.pics": "Afficher ou masquer les images des pièces. Masquées, les pièces sont aussi petites que leurs broches.",
+  "help.hw.pick": "Sélectionner la pièce et l'amener à l'écran. Clic droit pour son menu.",
+  "hw.m.image": "Image…",
+  "hw.m.pins": "Broches…",
+  "hw.m.rename": "Renommer…",
+  "hw.m.unwire": "Retirer ses fils ({n})",
+  "hw.m.off": "Retirer du canevas",
+  "hw.newName": "Nom"
  },
  "edge": {
   "de": {

@@ -287,7 +287,7 @@ def public_model(g: Graph) -> Graph:
     return out
 
 
-W, HEAD, ROW, PAD, IMG = 190, 28, 17, 8, 110
+W, HEAD, ROW, PAD, IMG = 190, 28, 17, 8, 70
 ROLE_COLOR = {"power": "red", "ground": "black", "signal": "blue", "audio": "purple", "video": "orange", "data": "green"}
 
 
@@ -305,7 +305,7 @@ def _layout(b: Dict[str, Any]) -> Dict[str, Any]:
     w = W + IMG if pic else W
     at = {x["id"]: (0, HEAD + PAD + i * ROW + ROW / 2, -1) for i, x in enumerate(left)}
     at.update({x["id"]: (w, HEAD + PAD + i * ROW + ROW / 2, 1) for i, x in enumerate(right)})
-    h = max(HEAD + PAD * 2 + max(len(left), len(right), 1) * ROW, HEAD + IMG + PAD * 2 if pic else 0)
+    h = HEAD + PAD * 2 + max(len(left), len(right), 3 if pic else 1) * ROW
     return {"at": at, "w": w, "h": h}
 
 
@@ -332,15 +332,15 @@ def wiring_svg(canvas: Dict[str, Any], title: str) -> str:
             return None
         ax, ay, side = g["at"][pin]
         return g["b"]["x"] + ax, g["b"]["y"] + ay, side
-    for w in canvas["wires"]:
-        a, b = (point(e["pin"], e["block"]) for e in w["ends"])
-        if not a or not b:
-            continue
-        ax, bx = a[0] + a[2] * 18, b[0] + b[2] * 18
-        mx = (ax + bx) / 2
+    from . import route as rt
+    wired = [(w, [point(e["pin"], e["block"]) for e in w["ends"]]) for w in canvas["wires"]]
+    wired = [(w, e) for w, e in wired if e[0] and e[1]]
+    routes = rt.route([tuple(e) for _, e in wired], [(g["b"]["x"], g["b"]["y"], g["w"], g["h"]) for g in geo.values()])
+    for i, (w, _) in enumerate(wired):
         role = next((x.get("role") for x in geo[w["ends"][0]["block"]]["b"]["pins"] if x["id"] == w["ends"][0]["pin"]), "")
         color = w.get("color") or ROLE_COLOR.get(role or "", "gray")
-        out.append(f'<path d="M{a[0]},{a[1]} H{ax} H{mx} V{b[1]} H{bx} H{b[0]}" fill="none" stroke="{_x(color)}" stroke-width="2.5"/>')
+        d = rt.path(routes[i], [r for j, r in enumerate(routes) if j != i])
+        out.append(f'<path d="{d}" fill="none" stroke="{_x(color)}" stroke-width="2.5" stroke-linejoin="round"/>')
     for g in geo.values():
         b = g["b"]
         dash = ' stroke-dasharray="6 4"' if b.get("supply") == "to-buy" else ""

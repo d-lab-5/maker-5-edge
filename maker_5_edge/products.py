@@ -501,6 +501,16 @@ class Products:
                           "interface": _local(iface) if iface is not None else ""})
         return {"blocks": blocks, "wires": wires}
 
+    def unplace(self, p: str, block: str) -> Dict:
+        """Take a block off the canvas: its pins and wires stay in the model
+        and come back with it when it is placed again."""
+        def apply(g: Graph) -> None:
+            n = self._find(g, block, "block")
+            g.remove((n, M5.canvasX, None))
+            g.remove((n, M5.canvasY, None))
+        self._change(p, apply)
+        return {"id": block, "placed": False}
+
     def place(self, p: str, block: str, x: int, y: int, default_pins: Optional[List[Dict[str, Any]]] = None) -> Dict:
         """Where a block sits on the canvas, in canvas units. A block placed
         for the first time with no pins gets default_pins (parts.pins_for),

@@ -307,6 +307,11 @@ def canvas_place(p: str):
     return run(placed)
 
 
+@app.post("/api/products/<p>/canvas/unplace")
+def canvas_unplace(p: str):
+    return run(products().unplace, p, str(body().get("block") or ""))
+
+
 @app.post("/api/products/<p>/canvas/pins")
 def canvas_pins(p: str):
     b = body()

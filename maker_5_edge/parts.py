@@ -45,10 +45,33 @@ def physical(pins: List[Dict[str, Any]], known: List[Dict[str, Any]]) -> List[Di
     return sorted(out, key=lambda p: p["n"])
 
 
+PORT = re.compile(r"\b(usb|hdmi|ethernet|audio|video|jack|rj45|sd card|csi|dsi|camera|display|power in|5v in|dc in)\b", re.I)
+
+
+def with_ports(pins: List[Dict[str, Any]], known: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """A library part's pins and the board's ports. A Fritzing part models only
+    the header; the USB, video, audio, Ethernet and power sockets the library
+    here knows come after it, so cables can be wired to them."""
+    used = {p["n"] for p in pins if p.get("n")}
+    names = {_key(p["name"]) for p in pins}
+    nxt = max(used or {0}) + 1
+    out = [dict(p) for p in pins]
+    for k in known:
+        if not PORT.search(k["name"]) or _key(k["name"]) in names and not PORT.search(k["name"]):
+            continue
+        if any(o["name"] == k["name"] for o in out):
+            continue
+        n = k["n"] if k["n"] not in used else nxt
+        used.add(n)
+        nxt = max(used) + 1
+        out.append({**k, "n": n})
+    return sorted(out, key=lambda p: p["n"])
+
+
 def pins_for(name: str) -> Dict[str, Any]:
     """The first part of the library whose words are in the block's name, or two generic pins."""
     low = f" {(name or '').lower()} "
     for part in library():
         if any(w in low for w in part["match"]):
-            return {"title": part["title"], "pins": [dict(x) for x in part["pins"]]}
+            return {"title": part["title"], "pins": [dict(x) for x in part["pins"]], "fritzing": part.get("fritzing", "")}
     return {"title": "", "pins": [dict(x) for x in GENERIC]}

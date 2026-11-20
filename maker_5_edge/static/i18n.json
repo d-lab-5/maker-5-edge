@@ -312,7 +312,8 @@
   "dep.step.copy": "Copy",
   "dep.step.restart": "Restart",
   "dep.step.log": "Log",
-  "dep.step.failed": "Stopped"
+  "dep.step.failed": "Stopped",
+  "hw.fzSuggested": "fits this block"
  },
  "de": {
   "core.theme": "Design",
@@ -627,7 +628,8 @@
   "dep.step.copy": "Kopieren",
   "dep.step.restart": "Neustart",
   "dep.step.log": "Log",
-  "dep.step.failed": "Abgebrochen"
+  "dep.step.failed": "Abgebrochen",
+  "hw.fzSuggested": "passt zu diesem Block"
  },
  "fr": {
   "core.theme": "thème",
@@ -942,7 +944,8 @@
   "dep.step.copy": "Copie",
   "dep.step.restart": "Redémarrage",
   "dep.step.log": "Journal",
-  "dep.step.failed": "Arrêté"
+  "dep.step.failed": "Arrêté",
+  "hw.fzSuggested": "convient à ce bloc"
  },
  "edge": {
   "de": {

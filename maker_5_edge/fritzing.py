@@ -105,14 +105,20 @@ def search(q: str, limit: int = 30) -> List[Dict[str, str]]:
     words = [w for w in re.split(r"\W+", (q or "").lower()) if w]
     if not words:
         return []
-    hits = []
+    hits, near = [], []
     for p in index():
         name = _label(p)
         hay = name.lower()
+        tokens = re.split(r"[^a-z0-9+]+", hay)
+        whole = sum(1 for w in words if w in tokens)                # "b" as a word, not inside "board"
+        hit = {"path": p, "name": name, "folder": p.split("/", 1)[0], "_rank": (-whole, p.split("/", 1)[0] != "core", len(name))}
         if all(w in hay for w in words):
-            tokens = re.split(r"[^a-z0-9+]+", hay)
-            whole = sum(1 for w in words if w in tokens)            # "b" as a word, not inside "board"
-            hits.append({"path": p, "name": name, "folder": p.split("/", 1)[0], "_rank": (-whole, p.split("/", 1)[0] != "core", len(name))})
+            hits.append(hit)
+        elif whole >= 2:
+            near.append(hit)                                        # a block's whole name: most words first
+    if not hits:
+        best = min((h["_rank"][0] for h in near), default=0)
+        hits = [h for h in near if h["_rank"][0] <= best + 1]
     hits.sort(key=lambda h: (*h["_rank"], h["name"].lower()))
     for h in hits:
         h.pop("_rank")

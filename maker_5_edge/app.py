@@ -397,7 +397,14 @@ def deploy_run(p: str, ident: str):
 
 @app.get("/api/fritzing/search")
 def fritzing_search():
-    return run(fz.search, request.args.get("q", ""), request.args.get("limit", 30, type=int))
+    """`for`: the block's name; the part the library here names for it comes first."""
+    def found():
+        hits = fz.search(request.args.get("q", ""), request.args.get("limit", 30, type=int))
+        best = parts.pins_for(request.args.get("for", "")).get("fritzing") if request.args.get("for") else ""
+        if best:
+            hits = [{"path": best, "name": fz._label(best), "folder": best.split("/", 1)[0], "suggested": True}] + [h for h in hits if h["path"] != best]
+        return hits
+    return run(found)
 
 
 @app.get("/api/fritzing/part")
@@ -428,7 +435,7 @@ def canvas_fritzing(p: str):
     def used():
         part = fz.part(str(b.get("path") or ""))
         known = parts.pins_for(part["title"])
-        pins = parts.physical(part["pins"], known["pins"]) if known["title"] else part["pins"]
+        pins = parts.with_ports(parts.physical(part["pins"], known["pins"]), known["pins"]) if known["title"] else part["pins"]
         return {**products().use_part(p, str(b.get("block") or ""), part["path"], pins),
                 "title": part["title"], "author": part["author"], "license": part["license"]}
     return run(used)

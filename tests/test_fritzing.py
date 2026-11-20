@@ -113,3 +113,26 @@ def test_a_boards_pins_are_numbered_as_the_board_is():
     got = parts.physical(fritz, known)
     assert [(p["n"], p["name"]) for p in got] == [(1, "3V3"), (6, "GND"), (7, "GPIO 4"), (8, "GPIO 14"), (9, "GND")]
     assert parts.physical([{"n": 1, "name": "Nothing here", "role": "signal"}], known)[0]["n"] == 1, "unknown: kept"
+
+
+def test_a_boards_ports_stay_when_it_takes_a_part():
+    """A Fritzing part models only the header: the board's USB, video, audio,
+    Ethernet and power sockets from the library come after it, for cables."""
+    from maker_5_edge import parts
+    known = parts.pins_for("Raspberry Pi 1 Model B")["pins"]
+    header = parts.physical([{"n": 1, "name": "3V3", "role": "power"}, {"n": 2, "name": "GPIO 17", "role": "signal"}], known)
+    got = parts.with_ports(header, known)
+    assert [p["name"] for p in got] == ["3V3", "GPIO 17", "USB 1", "USB 2", "Ethernet", "Audio out", "Video out", "5V in (micro USB)"]
+    assert [p["role"] for p in got if p["name"] in ("Video out", "Audio out", "USB 1")] == ["data", "audio", "video"]
+    assert len({p["n"] for p in got}) == len(got), "numbers stay unique"
+
+
+def test_the_part_the_library_names_for_a_block_comes_first(lib):
+    hits = web.app.test_client().get("/api/fritzing/search?q=opto&for=Raspberry Pi 1 Model B").get_json()
+    assert hits[0] == {"path": "core/Raspberry_Pi_B(rev2).fzp", "name": "Raspberry Pi B(rev2)", "folder": "core", "suggested": True}
+    assert hits[1]["path"] == "core/Example_Opto.fzp"
+
+
+def test_a_blocks_whole_name_finds_the_closest_parts(lib):
+    assert [h["path"] for h in fz.search("example opto pc817 board")] == [
+        "contrib/Example_Opto_Board_0123456789abcdef0123456789abcdef_3.fzp", "core/Example_Opto.fzp"]

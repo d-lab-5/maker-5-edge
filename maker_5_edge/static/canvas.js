@@ -313,7 +313,7 @@
    *  its pins and picture, use it (fritzing.py fetches only what is picked). */
   function fritzingDialog(b, q) {
     if (!b) return;
-    const words = q ?? b.name.replace(/\(.*?\)/g, " ").split(/\s+/).filter((w) => w.length > 1).slice(0, 2).join(" ");
+    const words = q ?? b.name.replace(/\(.*?\)/g, " ").replace(/[,;].*$/, "").split(/\s+/).filter(Boolean).slice(0, 6).join(" ");
     core.dialog(t("hw.fzFor", { name: b.name }), `
       <p class="note">${esc(t("hw.fzHint"))}</p>
       <label><input name="q" value="${esc(words)}" placeholder="${esc(t("hw.fzSearch"))}"></label>
@@ -328,9 +328,9 @@
       const find = async () => {
         results.innerHTML = `<p class="note">…</p>`;
         try {
-          const hits = await core.api("GET", `/api/fritzing/search?q=${encodeURIComponent(form.querySelector('[name="q"]').value)}`);
+          const hits = await core.api("GET", `/api/fritzing/search?q=${encodeURIComponent(form.querySelector('[name="q"]').value)}&for=${encodeURIComponent(b.name)}`);
           results.innerHTML = hits.length ? `<ul>${hits.map((h) => `<li><button type="button" class="linkish" data-path="${esc(h.path)}">${esc(h.name)}</button>
-            <small class="note">${esc(h.folder)}</small></li>`).join("")}</ul>` : `<p class="note">${esc(t("hw.fzNone"))}</p>`;
+            <small class="note">${esc(h.folder)}</small>${h.suggested ? ` <span class="pill">${esc(t("hw.fzSuggested"))}</span>` : ""}</li>`).join("")}</ul>` : `<p class="note">${esc(t("hw.fzNone"))}</p>`;
           results.querySelectorAll("[data-path]").forEach((x) => x.onclick = () => show(x.dataset.path));
         } catch (err) { results.innerHTML = `<p class="note warn">${esc(failed(err))}</p>`; }
       };

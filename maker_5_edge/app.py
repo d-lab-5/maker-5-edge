@@ -32,6 +32,7 @@ from flask import abort, jsonify, render_template, request
 
 from . import bom_import
 from . import fritzing as fz
+from . import git_repo
 from . import inbox as ib
 from . import materials as mt
 from . import parts
@@ -165,6 +166,8 @@ def run(fn, *args, **kwargs):
         return jsonify({"errors": [str(e.payload.get("message") or e) if e.payload else str(e)]}), 422 if e.status == 422 else 502
     except fz.FritzingError as e:
         return jsonify({"errors": [str(e)]}), 502
+    except git_repo.RepoError as e:
+        return jsonify({"errors": [str(e)]}), 409
     except (ValueError, TypeError) as e:
         return jsonify({"errors": [str(e)]}), 400
 
@@ -305,6 +308,50 @@ def canvas_place(p: str):
 def canvas_pins(p: str):
     b = body()
     return run(products().set_pins, p, str(b.get("block") or ""), b.get("pins") or [])
+
+
+# ---- the workspace's repository on GitHub (git_repo.py; ADR-0017)
+
+@app.get("/api/products/<p>/repo")
+def repo_status(p: str):
+    return run(git_repo.status, products(), p)
+
+
+@app.post("/api/products/<p>/repo/link")
+def repo_link(p: str):
+    b = body()
+    return run(git_repo.link, products(), p, str(b.get("existing") or ""), str(b.get("visibility") or ""))
+
+
+@app.get("/api/products/<p>/repo/diff")
+def repo_diff(p: str):
+    return run(git_repo.diff, products(), p)
+
+
+@app.post("/api/products/<p>/repo/push")
+def repo_push(p: str):
+    return run(git_repo.push, products(), p, str(body().get("message") or ""))
+
+
+@app.post("/api/products/<p>/repo/pull")
+def repo_pull(p: str):
+    return run(git_repo.pull, products(), p)
+
+
+@app.get("/api/products/<p>/repo/files")
+def repo_files(p: str):
+    return run(git_repo.files, products(), p)
+
+
+@app.get("/api/products/<p>/repo/file")
+def repo_read(p: str):
+    return run(git_repo.read, products(), p, request.args.get("path", ""))
+
+
+@app.post("/api/products/<p>/repo/file")
+def repo_write(p: str):
+    b = body()
+    return run(git_repo.write, products(), p, str(b.get("path") or ""), str(b.get("text") or ""))
 
 
 # ---- parts from the Fritzing library (fritzing.py; ADR-0016)

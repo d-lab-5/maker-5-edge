@@ -57,6 +57,18 @@ it is never part of this repository, and the canvas credits it. Pins,
 wires and positions are in the model, so they sync and the chat can read and
 propose them (ADR-0014 in maker-5-shared).
 
+The **Code** tab keeps a workspace's design and code in its own GitHub
+repository, open source (ADR-0017 in maker-5-shared). **Link to GitHub**
+makes `maker-5-platform/<workspace>` with your own login (the GitHub CLI,
+`gh auth login`) and clones it into the workspace's folder. `software/` is
+yours and the agent's to write; `hardware/` (the model without stock links,
+the wiring as SVG, a netlist and a parts list) is written from the model on
+every push. **Review and push** shows everything a push publishes and
+refuses tokens, keys and e-mail addresses. Stock, places, prices, people and
+chats stay in the cloud, which keeps only the link. The chat finds free and
+idle parts with `catalogue()` and `free_parts()` before it proposes buying
+any (ADR-0018, ADR-0019).
+
 Your work lives in `mymaker5docs/`, which git ignores and which follows the
 working directory: a folder per cloud, `mymaker5docs/prod/` and
 `mymaker5docs/stage/`, each synced with its own cloud alone (ADR-0013 in

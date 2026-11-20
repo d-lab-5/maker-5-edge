@@ -280,3 +280,17 @@ body.side-hidden .layout > .work, body.side-hidden .layout > #edge-connections {
 .linkish { background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; text-align: left; font: inherit; }
 .fz-part { display: flex; gap: 12px; align-items: flex-start; max-width: min(70vw, 640px); }
 .fz-part img { width: 120px; max-height: 120px; object-fit: contain; background: #fff; border: 1px solid var(--edge); border-radius: 6px; }
+/* the Code tab: the workspace's repository (ADR-0017) */
+.code-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; }
+.code-bar .code-pull { margin-left: auto; }
+.code { display: grid; grid-template-columns: minmax(180px, 280px) 1fr; gap: 12px; min-height: 50vh; }
+.code-files ul { list-style: none; margin: 0 0 8px; padding: 0; max-height: 60vh; overflow: auto; font-size: 13px; }
+.code-files li { padding: 1px 0; }
+.code-files .is-on { font-weight: 600; }
+.code-head { display: flex; gap: 10px; align-items: center; margin-bottom: 6px; }
+.code-text { margin: 0; padding: 10px; max-height: 62vh; overflow: auto; background: var(--panel, #f6f7f9);
+  border: 1px solid var(--edge); border-radius: 6px; font-size: 12.5px; white-space: pre; }
+.code-diff { max-height: 45vh; min-width: min(80vw, 900px); }
+.code-area { width: min(80vw, 900px); font-family: ui-monospace, monospace; font-size: 12.5px; }
+.code-intro { max-width: 680px; }
+@media (max-width: 760px) { .code { grid-template-columns: 1fr; } }

@@ -49,6 +49,7 @@
     <nav class="tabs" role="tablist">
       <button data-tab="model" class="is-on" data-i18n="tab.model" data-help="help.model">Model</button>
       <button data-tab="canvas" data-i18n="tab.canvas" data-help="help.canvas">Hardware</button>
+      <button data-tab="code" data-i18n="tab.code" data-help="help.code">Code</button>
       <button data-tab="proposals" data-i18n="tab.proposals" data-help="help.proposals">Proposals</button>
       <button data-tab="history" data-i18n="tab.history" data-help="help.history">History</button>
       <button data-tab="files" data-i18n="tab.files" data-help="help.files">Files</button>
@@ -58,6 +59,7 @@
     <div id="tab-history" class="tab" hidden></div>
     <div id="tab-canvas" class="tab" hidden></div>
     <div id="tab-files" class="tab" hidden></div>
+    <div id="tab-code" class="tab" hidden></div>
   </section>
 
   <section id="edge-connections" class="panel"></section>  <!-- edge layer -->
@@ -72,5 +74,6 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='i18n.js') }}"></script>
 <script src="{{ url_for('static', filename='canvas.js') }}"></script>
+<script src="{{ url_for('static', filename='code.js') }}"></script>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
 {% endblock %}

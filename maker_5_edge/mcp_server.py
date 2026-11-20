@@ -47,7 +47,8 @@ server = MCPServer(
         "reserve_parts(), release_parts(), return_parts(). Boxes (read "
         "only): boxes(), box(). A BOM in Markdown: import_bom(). Hardware "
         "wiring: canvas(), place(), set_pins(), wire(); remove a wire with remove(). "
-        "Fritzing parts: fritzing_search(), fritzing_part(), fritzing_use()."
+        "Fritzing parts: fritzing_search(), fritzing_part(), fritzing_use(). "
+        "Code on GitHub: repo_status(), repo_files(), repo_read(), repo_write(), repo_push()."
     ),)
 
 web.add_core_tools(server)
@@ -276,6 +277,41 @@ def canvas(product: str) -> dict:
     """The hardware canvas: each block's place and pins (ids <block>.<n>,
     names like GPIO17, roles), and the wires between pins."""
     return _get(_p(product) + "/canvas")
+
+
+@server.tool()
+def repo_status(product: str) -> dict:
+    """The workspace's GitHub repository: linked or not, its address and
+    branch, the files changed since the last push, ahead and behind."""
+    return _get(_p(product) + "/repo")
+
+
+@server.tool()
+def repo_files(product: str) -> list:
+    """The repository's files: path, size, tracked, and whether you may write
+    it (only software/; hardware/ is written from the model)."""
+    return _get(_p(product) + "/repo/files")
+
+
+@server.tool()
+def repo_read(product: str, path: str) -> dict:
+    """One file of the repository, as text."""
+    return _get(_p(product) + "/repo/file?" + urllib.parse.urlencode({"path": path}))
+
+
+@server.tool()
+def repo_write(product: str, path: str, text: str) -> dict:
+    """Propose a file under software/, whole: it is written when the person
+    confirms, and published with the next push. The repository is public."""
+    return act(f"Write {path}", "POST", _p(product) + "/repo/file", {"path": path, "text": text})
+
+
+@server.tool()
+def repo_push(product: str, message: str) -> dict:
+    """Propose a push: hardware/ is written again from the model, everything
+    is checked for secrets and e-mail addresses, committed with this message
+    and pushed with the person's GitHub login."""
+    return act(f"Push to GitHub: {message[:80]}", "POST", _p(product) + "/repo/push", {"message": message})
 
 
 @server.tool()

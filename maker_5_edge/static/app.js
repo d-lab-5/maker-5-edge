@@ -592,6 +592,7 @@ async function refresh() {
     if (S.tab === "files") return drawFiles();
     if (S.tab === "model") await drawModel();
     if (S.tab === "canvas") await window.canvasView.draw(P(), S.ws);
+    if (S.tab === "code") await window.codeView.draw(P(), S.ws);
     if (S.tab === "proposals") await drawProposals();
     if (S.tab === "history") await drawHistory();
   } catch (err) {

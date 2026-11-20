@@ -63,6 +63,14 @@ ENVIRONMENTS: Dict[str, str] = {
 
 # What a proposal from the chat may run on this edge's own API: (method, path
 # regex). Nothing else can be proposed. Add the tool's own routes here.
+# A workspace's design and code on GitHub (git_repo.py; ADR-0017 in
+# maker-5-shared): made in this organisation with the person's own gh login.
+# The cloud keeps only the link; stock, prices and people stay there.
+GITHUB_ORG = "maker-5-platform"
+REPO_VISIBILITY = "public"
+LICENSE_SOFTWARE = "GPL-3.0-only"
+LICENSE_HARDWARE = "CERN-OHL-S-2.0"
+
 CHAT_ALLOWED: List[Tuple[str, str]] = [
     ("POST", r"/api/jobs/[\w-]{1,40}/cancel"),
     ("POST", r"/api/cloud/link"),
@@ -82,6 +90,8 @@ CHAT_ALLOWED: List[Tuple[str, str]] = [
     ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/items/(b|m)-[a-z0-9]{8}/article"),
     # parts from the workspace's stock (ADR-0010 in maker-5-shared)
     ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/parts/(reserve|release|return)"),
+    # the workspace's repository (ADR-0017): software/ files, and a push the person confirms
+    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/repo/(file|push)"),
     # history: name a revision, make a baseline, go back to one (as a new revision)
     ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/revisions/([0-9]{1,5}|latest)/(tag|restore)"),
     # never here: /proposals/<id>/decide, which a person does on the page (ADR-0006 in maker-5-shared)
@@ -146,6 +156,13 @@ part has none or the wrong ones (set_pins), then the wires (wire(), with a
 colour: red for power, black for ground). Check a pin's name and role in
 canvas() before wiring it: never guess a pin id. Say which wires you would
 draw and why before proposing them; a BOM in Markdown is import_bom().
+The workspace's code is in its GitHub repository (repo_status(): linked or
+not; repo_files(), repo_read(path)). Write code with repo_write(path, text),
+only under software/ (hardware/ is written from the model on every push);
+one file per proposal, a whole file each time. When a piece of work is
+done, propose repo_push(message): the person sees the diff and confirms.
+The repository is public: never write a secret, a password, a token, a
+private address or a person's e-mail into it.
 A part of the Fritzing parts library gives a block its real pinout:
 fritzing_search() finds parts by words of their name ("PC817", "Raspberry Pi
 B rev2"), fritzing_part() shows one's pins, fritzing_use() proposes it for a

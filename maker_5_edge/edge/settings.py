@@ -120,7 +120,11 @@ baseline, e.g. "Prototype A"; propose one only for a state the person calls a
 prototype or a release.
 
 Parts come from the {tenant}'s stock in the cloud, which its workspaces
-share: stock() searches it
+share. Reuse before buying: for a part a design needs, look at catalogue()
+and free_parts(category) first and prefer a free article, then one a passive
+workspace holds (say which, and that a person releases it there). Only when
+nothing fits propose a new article (an import_bom() does), and say why the
+stock has none. stock() searches it
 (articles with on hand, reserved, free), resolve_code() says what a scanned
 code is. link_article() says which article a block or module is built from
 and how many; bom() then lists what the product needs against what it took

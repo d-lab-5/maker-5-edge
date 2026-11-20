@@ -38,15 +38,46 @@ MAX_ROWS = 200
 SUPPLY_WORDS = (("to-buy", ("to buy", "to build", "buy", "order")),
                 ("in-hand", ("in hand", "set up", "have")),
                 ("there", ("already", "kept", "existing", "there")))
-# a part's name, by its words, to an article category (the cloud's list)
-CATEGORY_WORDS = (("tool", ("multimeter", "oscilloscope", "soldering", "tools", " tv ", "old tv")),
-                  ("storage", ("sd card", "microsd", " card", "ssd", "usb stick", "flash")),
-                  ("compute", ("raspberry", "pi ", "arduino", "esp32", "esp8266", "phone", "computer", "board pc")),
-                  ("cable", ("cable", "wire", "lead", "ethernet")),
-                  ("mechanical", ("enclosure", "perfboard", "terminal", "case", "box", "din rail", "mount", "screw")),
-                  ("consumable", ("solder", "tape", "glue", "heat shrink")))
-MECHANICAL = ("mechanical",)
-SERIAL = ("compute",)
+# a part's name, by its words, to an article category (ADR-0019: "top/sub",
+# the ontology's m5:ArticleCategories). The first match wins, so the more
+# particular words come first: a sound card is audio, not storage.
+CATEGORY_WORDS = (("tools/measuring", ("multimeter", "oscilloscope", "logic analyser", "logic analyzer")),
+                  ("tools/soldering", ("soldering iron", "soldering station", "hot air")),
+                  ("tools/hand", ("tools", "screwdriver", "pliers", "crimp")),
+                  ("media/displays", (" tv ", "old tv", "monitor", "display", "lcd", "oled", "e-paper")),
+                  ("media/audio", ("sound card", "audio", "speaker", "amplifier", "lm386", "microphone", " mic ", "buzzer")),
+                  ("media/video", ("video", "hdmi", "composite")),
+                  ("media/lights", ("led strip", "neopixel", " led ", "lamp")),
+                  ("sensors/vision", ("camera",)),
+                  ("sensors/buttons", ("button", "push switch", "switch", "door station", "doorbell", "door bell", "keypad")),
+                  ("sensors/environment", ("temperature", "humidity", "bme280", "dht", "pressure sensor", "light sensor")),
+                  ("sensors/motion", ("pir", "accelerometer", "gyro", "imu", "ultrasonic", "encoder")),
+                  ("controllers/storage", ("sd card", "microsd", "ssd", "usb stick", "flash drive", " hdd")),
+                  ("controllers/mcu", ("arduino", "esp32", "esp8266", "pico", "stm32", "attiny")),
+                  ("controllers/sbc", ("raspberry", "pi ", "jetson", "board pc", "computer")),
+                  ("controllers/phones", ("phone", "tablet")),
+                  ("communication/networking", ("router", "ethernet switch", "wi-fi dongle", "wifi dongle", "network")),
+                  ("power/converters", ("step-down", "step down", "buck", "boost", "converter", "regulator")),
+                  ("power/supplies", ("power supply", "psu", "adapter", "charger plug")),
+                  ("power/batteries", ("battery", "batteries", "18650", "lipo")),
+                  ("components/semiconductors", ("optocoupler", "pc817", "transistor", "diode", "mosfet")),
+                  ("actuators/relays", ("relay",)),
+                  ("actuators/motors", ("motor",)),
+                  ("actuators/locks", ("solenoid", "door opener", "strike", "lock")),
+                  ("components/passives", ("resistor", "capacitor", "inductor", "potentiometer")),
+                  ("components/prototyping", ("perfboard", "breadboard", "stripboard", "jumper", "dupont")),
+                  ("cables/connectors", ("terminal", "connector", "header", "plug", "socket")),
+                  ("cables/cables", ("cable", "lead", "ethernet")),
+                  ("cables/wire", ("wire",)),
+                  ("chassis/enclosures", ("enclosure", "case", "box", "housing")),
+                  ("mechanical/mounting", ("din rail", "mount", "bracket", "standoff")),
+                  ("mechanical/fasteners", ("screw", "nut", "bolt")),
+                  ("consumables/solder", ("solder",)),
+                  ("consumables/tape", ("tape", "glue")),
+                  ("consumables/heat-shrink", ("heat shrink",)),
+                  ("components/ics", (" ic ", "chip")))
+MECHANICAL = ("chassis", "mechanical")
+SERIAL = ("controllers/sbc", "controllers/mcu", "controllers/phones", "tools/measuring")
 
 
 def _cells(line: str) -> List[str]:
@@ -87,8 +118,10 @@ def parse(text: str) -> List[Dict[str, Any]]:
 
 
 def _words(text: str, table) -> str:
-    t = f" {text.lower()} "
-    return next((k for k, words in table if any(w in t for w in words)), "")
+    """The first key whose words appear in text as whole words ("lock" is not in "block")."""
+    t = text.lower()
+    has = lambda w: re.search(rf"(?<![a-z0-9]){re.escape(w.strip())}(?![a-z0-9])", t)  # noqa: E731
+    return next((k for k, words in table if any(has(w) for w in words)), "")
 
 
 def _split_name(name: str) -> Dict[str, str]:
@@ -136,12 +169,12 @@ def preview(products: Any, p: str, text: str, profile: Optional[str] = None) -> 
             continue
         n = _split_name(row["name"])
         note = "; ".join(x for x in (n["note"], _description(row["cols"], first)) if x)
-        category = _words(row["name"], CATEGORY_WORDS) or "electronic"
-        is_tool = category == "tool" or "tools, not parts" in note.lower()
+        category = _words(row["name"], CATEGORY_WORDS) or "components"
+        is_tool = category.startswith("tools") or "tools, not parts" in note.lower()
         article = stock.get(n["name"].lower())
         line = {"name": n["name"], "description": note[:1000],
                 "article": {"id": article["id"], "name": article["name"]} if article else None,
-                "propose": None if article else {"name": n["name"], "category": "tool" if is_tool else category,
+                "propose": None if article else {"name": n["name"], "category": category if category.startswith("tools") or not is_tool else "tools",
                                                  "tracking": "serial" if category in SERIAL else "bulk",
                                                  "note": note[:500]},
                 "include": True}
@@ -152,7 +185,8 @@ def preview(products: Any, p: str, text: str, profile: Optional[str] = None) -> 
             skipped.append(n["name"])
             continue
         supply = _words(row["group"], SUPPLY_WORDS)
-        line.update(kind="mechanical" if category in MECHANICAL else "electronic", supply=supply)
+        line.update(kind="mechanical" if category.split("/")[0] in MECHANICAL or category.startswith("components/prototyping")
+                    else "electronic", supply=supply)
         # a part already there (kept from an old kit) is often not in stock: propose it only if it is to hand
         if supply == "there" and line["propose"]:
             line["include_article"] = False

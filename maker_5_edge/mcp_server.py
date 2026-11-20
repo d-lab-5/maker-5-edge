@@ -187,9 +187,26 @@ def propose(product: str, title: str, concerns: Optional[List[str]] = None) -> d
 def stock(query: str = "", category: str = "") -> list:
     """The organisation's stock, shared by its workspaces: articles (id, name, category, maker, part
     number, place) with onHand, reserved and free. Search by words; a
-    category is compute, storage, electronic, mechanical, cable, consumable,
-    tool or other."""
+    category is a code of catalogue(), a top one ("controllers") or a sub one
+    ("controllers/sbc"); a top one holds its subs."""
     return _get("/api/stock?" + urllib.parse.urlencode(_clean(q=query, category=category)))
+
+
+@server.tool()
+def catalogue() -> list:
+    """The stock's categories (two levels: code "top" or "top/sub", label in
+    en, de, fr) with how many articles each has and how many are free. Look
+    here first to see what the organisation has."""
+    return _get("/api/catalogue")
+
+
+@server.tool()
+def free_parts(category: str = "") -> dict:
+    """What a new design can use before anything is bought: articles with
+    free stock in a category, and parts that passive workspaces hold
+    (reserved, but no edge used that workspace in 14 days), which a person
+    may release there and take here."""
+    return _get("/api/catalogue/free?" + urllib.parse.urlencode(_clean(category=category)))
 
 
 @server.tool()

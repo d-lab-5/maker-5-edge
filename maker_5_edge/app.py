@@ -367,6 +367,16 @@ def stock():
     return run(mt.stock, request.args.get("q", ""), request.args.get("category", ""))
 
 
+@app.get("/api/catalogue")
+def catalogue():
+    return run(mt.catalogue)
+
+
+@app.get("/api/catalogue/free")
+def catalogue_free():
+    return run(mt.free_parts, request.args.get("category", ""))
+
+
 @app.get("/api/stock/<article_id>")
 def stock_article(article_id: str):
     return run(mt.article, article_id)

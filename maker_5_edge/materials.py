@@ -20,6 +20,11 @@ for it (edge/sync.py), else by NAME (edge/cloud.py space_slug).
                              reserve, release or return parts for the product
     propose(articles)        articles a BOM import needs, proposed for an admin
                              to accept (ADR-0014); the only catalogue write
+    catalogue()              the categories (ADR-0019, two levels) with how
+                             many articles each has and how many are free
+    free_parts(category)     what a new design can use: articles with free
+                             stock, and parts that passive workspaces hold
+                             (ADR-0018), which a person may ask back
     boxes(q, workspace)      the organisation's boxes (ADR-0011), read only
     box(code_or_id)          what a box holds, where it is, its links and files
 
@@ -43,6 +48,21 @@ class NoSpace(LookupError):
 
 def stock(q: str = "", category: str = "", profile: Optional[str] = None) -> List[Dict[str, Any]]:
     return cloud.call("materials/list", {"q": q, "category": category}, profile).get("articles", [])
+
+
+def catalogue(profile: Optional[str] = None) -> List[Dict[str, Any]]:
+    """The categories, top then sub, each with articles and free counts; empty ones left out."""
+    cats = cloud.call("materials/categories", {}, profile).get("categories", [])
+    return [c for c in cats if c.get("articles")]
+
+
+def free_parts(category: str = "", profile: Optional[str] = None) -> Dict[str, Any]:
+    """What a design can take before anything is bought: free stock in the
+    category, and what passive workspaces hold (reserved, not used lately)."""
+    free = [{k: a.get(k) for k in ("id", "name", "category", "free", "unit", "location") if a.get(k) is not None}
+            for a in stock("", category, profile) if (a.get("free") or 0) > 0 and not a.get("proposed")]
+    held = cloud.call("materials/idle", {"category": category}, profile).get("parts", [])
+    return {"free": free, "held_by_passive_workspaces": held}
 
 
 def article(article_id: str, profile: Optional[str] = None) -> Dict[str, Any]:

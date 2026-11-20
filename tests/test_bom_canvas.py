@@ -88,7 +88,7 @@ def test_the_preview_writes_nothing_and_says_what_it_would_make(P, cloud):
     b = {x["name"]: x for x in pv["blocks"]}
     assert b["Raspberry Pi 1 Model B"]["supply"] == "in-hand" and "512 MB" in b["Raspberry Pi 1 Model B"]["description"]
     assert b["Raspberry Pi 1 Model B"]["propose"]["tracking"] == "serial"
-    assert b["Optocoupler PC817"]["supply"] == "to-buy" and b["Optocoupler PC817"]["propose"]["category"] == "electronic"
+    assert b["Optocoupler PC817"]["supply"] == "to-buy" and b["Optocoupler PC817"]["propose"]["category"] == "components/semiconductors"
     assert b["Step-down 12 V to 5 V"]["article"]["id"] == "a-abcdefghjk" and b["Step-down 12 V to 5 V"]["propose"] is None
     assert b["Old enclosure"]["kind"] == "mechanical"
     assert b["Gate station"]["include_article"] is False, "a part already there is not proposed by default"
@@ -164,3 +164,16 @@ def test_the_parts_library_knows_the_usual_parts():
     assert parts.pins_for("Raspberry Pi 1 Model B")["pins"][10]["name"] == "GPIO17"
     assert parts.pins_for("LM386 amplifier board")["title"].startswith("LM386")
     assert parts.pins_for("Something else")["pins"] == parts.GENERIC
+
+
+def test_categories_are_guessed_in_two_levels():
+    """ADR-0019: the first, most particular match wins."""
+    from maker_5_edge.bom_import import CATEGORY_WORDS, _words
+    guess = lambda n: _words(n, CATEGORY_WORDS)  # noqa: E731
+    assert guess("USB sound card") == "media/audio", "not storage"
+    assert guess("SanDisk 16 GB microSD card") == "controllers/storage"
+    assert guess("Raspberry Pi 1 Model B") == "controllers/sbc"
+    assert guess("Step-down 12 V to 5 V") == "power/converters"
+    assert guess("Optocoupler PC817") == "components/semiconductors"
+    assert guess("Multimeter") == "tools/measuring"
+    assert guess("Terminal block, 2 way") == "cables/connectors"

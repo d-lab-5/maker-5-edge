@@ -91,7 +91,9 @@ CHAT_ALLOWED: List[Tuple[str, str]] = [
     # parts from the workspace's stock (ADR-0010 in maker-5-shared)
     ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/parts/(reserve|release|return)"),
     # the workspace's repository (ADR-0017): software/ files, and a push the person confirms
-    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/repo/(file|push)"),
+    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/repo/(file|push|incoming/take)"),
+    # deploy software/ to a target the person set up (ADR-0020); never set a target
+    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/deploy/t-[0-9a-f]{8}"),
     # history: name a revision, make a baseline, go back to one (as a new revision)
     ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/revisions/([0-9]{1,5}|latest)/(tag|restore)"),
     # never here: /proposals/<id>/decide, which a person does on the page (ADR-0006 in maker-5-shared)
@@ -156,10 +158,20 @@ part has none or the wrong ones (set_pins), then the wires (wire(), with a
 colour: red for power, black for ground). Check a pin's name and role in
 canvas() before wiring it: never guess a pin id. Say which wires you would
 draw and why before proposing them; a BOM in Markdown is import_bom().
+Code for a board takes its pins from software/generated/pins.py (one class
+per board, a constant per wired GPIO, named after what it goes to), written
+from the wiring on every push: import it, never write a GPIO number by
+hand; if a pin is missing, wire it on the canvas first.
 The workspace's code is in its GitHub repository (repo_status(): linked or
 not; repo_files(), repo_read(path)). Write code with repo_write(path, text),
 only under software/ (hardware/ is written from the model on every push);
-one file per proposal, a whole file each time. When a piece of work is
+one file per proposal, a whole file each time. If repo_status() says
+"incoming", someone changed hardware/model.ttl on GitHub: show it with
+repo_incoming() and propose repo_take_incoming(); no push goes out before.
+To run it on a board, deploy_targets() lists the boards the person set up
+(on the Code tab); propose deploy(target) and read the log it returns. You
+never add or change a target.
+When a piece of work is
 done, propose repo_push(message): the person sees the diff and confirms.
 The repository is public: never write a secret, a password, a token, a
 private address or a person's e-mail into it.

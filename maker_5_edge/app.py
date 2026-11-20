@@ -32,6 +32,7 @@ from flask import abort, jsonify, render_template, request
 
 from . import bom_import
 from . import fritzing as fz
+from . import deploy as dp
 from . import git_repo
 from . import inbox as ib
 from . import materials as mt
@@ -166,7 +167,7 @@ def run(fn, *args, **kwargs):
         return jsonify({"errors": [str(e.payload.get("message") or e) if e.payload else str(e)]}), 422 if e.status == 422 else 502
     except fz.FritzingError as e:
         return jsonify({"errors": [str(e)]}), 502
-    except git_repo.RepoError as e:
+    except (git_repo.RepoError, dp.DeployError) as e:
         return jsonify({"errors": [str(e)]}), 409
     except (ValueError, TypeError) as e:
         return jsonify({"errors": [str(e)]}), 400
@@ -338,6 +339,21 @@ def repo_pull(p: str):
     return run(git_repo.pull, products(), p)
 
 
+@app.get("/api/products/<p>/repo/incoming")
+def repo_incoming(p: str):
+    return run(git_repo.incoming, products(), p)
+
+
+@app.post("/api/products/<p>/repo/incoming/take")
+def repo_incoming_take(p: str):
+    return run(git_repo.take_incoming, products(), p)
+
+
+@app.post("/api/products/<p>/repo/incoming/drop")
+def repo_incoming_drop(p: str):
+    return run(git_repo.drop_incoming, products(), p)
+
+
 @app.get("/api/products/<p>/repo/files")
 def repo_files(p: str):
     return run(git_repo.files, products(), p)
@@ -352,6 +368,29 @@ def repo_read(p: str):
 def repo_write(p: str):
     b = body()
     return run(git_repo.write, products(), p, str(b.get("path") or ""), str(b.get("text") or ""))
+
+
+# ---- deploying software/ onto the boards (deploy.py; ADR-0020)
+
+@app.get("/api/products/<p>/deploy")
+def deploy_targets(p: str):
+    return run(dp.targets, products(), p)
+
+
+@app.post("/api/products/<p>/deploy/targets")
+def deploy_save(p: str):
+    """The page only: CHAT_ALLOWED leaves this out, so the chat never sets where code goes."""
+    return run(dp.save_target, products(), p, body())
+
+
+@app.delete("/api/products/<p>/deploy/targets/<ident>")
+def deploy_drop(p: str, ident: str):
+    return run(dp.drop_target, products(), p, ident)
+
+
+@app.post("/api/products/<p>/deploy/<ident>")
+def deploy_run(p: str, ident: str):
+    return run(dp.deploy, products(), p, ident)
 
 
 # ---- parts from the Fritzing library (fritzing.py; ADR-0016)

@@ -174,3 +174,62 @@ def test_a_remote_that_is_not_github_is_shown_as_it_is(ws, monkeypatch):
     st = gr.link(ws["P"], ws["p"])
     assert st["repo"] == str(ws["remote"]) and st["url"] == str(ws["remote"])
     assert gr._report(ws["P"], ws["p"], st) == "not a GitHub repository"
+
+
+def test_a_model_change_on_github_waits_to_be_brought_in(ws):
+    gr.link(ws["P"], ws["p"])
+    gr.push(ws["P"], ws["p"], "First design")
+    other = ws["tmp"] / "other"
+    sh("git", "clone", "--quiet", "https://github.com/maker-5-platform/door-bell.git", str(other))
+    f = other / "hardware" / "model.ttl"
+    f.write_text(f.read_text().replace('"Example opto"', '"Example optocoupler"'))
+    sh("git", "add", "-A", cwd=other)
+    sh("git", "commit", "--quiet", "-m", "Rename the opto", cwd=other)
+    sh("git", "push", "--quiet", "origin", "main", cwd=other)
+    st = gr.pull(ws["P"], ws["p"])
+    assert st["incoming"] is True
+    inc = gr.incoming(ws["P"], ws["p"])
+    assert inc["commits"][0]["subject"] == "Rename the opto"
+    assert any(x[2] == "Example optocoupler" for x in inc["added"]) and any(x[2] == "Example opto" for x in inc["removed"])
+    with pytest.raises(gr.RepoError, match="changed on GitHub"):
+        gr.push(ws["P"], ws["p"], "Would overwrite")
+    got = gr.take_incoming(ws["P"], ws["p"])
+    assert got["incoming"] is False and (got["added"], got["removed"]) == (1, 1)
+    assert "Example optocoupler" in [b["name"] for b in ws["P"].model(ws["p"])["blocks"]]
+    assert gr.push(ws["P"], ws["p"], "Took the rename")["reported"] == "ok"
+
+
+def test_dropping_github_changes_keeps_the_model(ws):
+    gr.link(ws["P"], ws["p"])
+    gr.push(ws["P"], ws["p"], "First design")
+    other = ws["tmp"] / "other"
+    sh("git", "clone", "--quiet", "https://github.com/maker-5-platform/door-bell.git", str(other))
+    f = other / "hardware" / "model.ttl"
+    f.write_text(f.read_text().replace('"Example opto"', '"Something else"'))
+    sh("git", "commit", "--quiet", "-am", "Rename", cwd=other)
+    sh("git", "push", "--quiet", "origin", "main", cwd=other)
+    gr.pull(ws["P"], ws["p"])
+    gr.drop_incoming(ws["P"], ws["p"])
+    gr.push(ws["P"], ws["p"], "Keep ours")
+    assert '"Example opto"' in (gr.repo_dir(ws["P"], ws["p"]) / "hardware" / "model.ttl").read_text()
+
+
+def test_the_pin_map_follows_the_wiring_and_the_code_is_checked(ws):
+    gr.link(ws["P"], ws["p"])
+    d = gr.repo_dir(ws["P"], ws["p"])
+    pm = gr.pin_map(ws["P"], ws["p"])
+    board = next(b for b in pm["boards"] if b["name"] == "Example board")
+    assert board["pins"][0]["gpio"] == 17 and board["pins"][0]["const"] == "EXAMPLE_OPTO_OUT"
+    py = (d / "software/generated/pins.py").read_text()
+    assert "class ExampleBoard:" in py and "EXAMPLE_OPTO_OUT = 17" in py
+    ns: dict = {}
+    exec(compile(py, "pins.py", "exec"), ns)                 # it is valid Python
+    assert ns["ExampleBoard"].EXAMPLE_OPTO_OUT == 17
+    with pytest.raises(ValueError, match="generated"):
+        gr.write(ws["P"], ws["p"], "software/generated/pins.py", "x")
+    gr.write(ws["P"], ws["p"], "software/main.py", "from gpiozero import Button\nb = Button(17)\nled = LED(pin=22)\n")
+    assert gr.diff(ws["P"], ws["p"])["pin_warnings"] == [{"path": "software/main.py", "line": 3, "gpio": 22}]
+
+
+def test_gpio_numbers_from_pin_names():
+    assert [gr._gpio(n) for n in ("GPIO17", "GPIO 17", "GPIO 14/TXD", "IO5", "D4", "GND")] == [17, 17, 14, 5, None, None]

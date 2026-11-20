@@ -69,6 +69,15 @@ chats stay in the cloud, which keeps only the link. The chat finds free and
 idle parts with `catalogue()` and `free_parts()` before it proposes buying
 any (ADR-0018, ADR-0019).
 
+If someone changes `hardware/model.ttl` on GitHub, **Pull** notices and the
+Code tab offers to bring those statements into the model, or to keep the
+model; no push goes out before. `software/generated/pins.py` is the pin map,
+written from the wiring: a class per board and a constant per wired GPIO, for
+the code to import. Under **Boards** you set where the software runs (a host
+over SSH with your own key, or this computer); **Deploy** copies `software/`
+there, runs the restart command, shows the log and records the commit on the
+board's block (ADR-0020). Hosts and users stay on this edge.
+
 Your work lives in `mymaker5docs/`, which git ignores and which follows the
 working directory: a folder per cloud, `mymaker5docs/prod/` and
 `mymaker5docs/stage/`, each synced with its own cloud alone (ADR-0013 in

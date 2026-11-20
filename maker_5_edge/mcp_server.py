@@ -48,7 +48,8 @@ server = MCPServer(
         "only): boxes(), box(). A BOM in Markdown: import_bom(). Hardware "
         "wiring: canvas(), place(), set_pins(), wire(); remove a wire with remove(). "
         "Fritzing parts: fritzing_search(), fritzing_part(), fritzing_use(). "
-        "Code on GitHub: repo_status(), repo_files(), repo_read(), repo_write(), repo_push()."
+        "Code on GitHub: repo_status(), repo_files(), repo_read(), repo_write(), repo_push(), "
+        "repo_incoming(), repo_take_incoming(). On boards: deploy_targets(), deploy()."
     ),)
 
 web.add_core_tools(server)
@@ -284,6 +285,33 @@ def repo_status(product: str) -> dict:
     """The workspace's GitHub repository: linked or not, its address and
     branch, the files changed since the last push, ahead and behind."""
     return _get(_p(product) + "/repo")
+
+
+@server.tool()
+def repo_incoming(product: str) -> dict:
+    """What others changed in hardware/model.ttl on GitHub and the model does
+    not have yet: the statements added and removed, and their commits."""
+    return _get(_p(product) + "/repo/incoming")
+
+
+@server.tool()
+def repo_take_incoming(product: str) -> dict:
+    """Propose bringing the GitHub changes into the model, in one revision."""
+    return act("Bring the GitHub changes into the model", "POST", _p(product) + "/repo/incoming/take", {})
+
+
+@server.tool()
+def deploy_targets(product: str) -> list:
+    """The boards the person set up to deploy to: id, block, host (or this
+    computer), folder, restart and log commands, and the last deployment."""
+    return _get(_p(product) + "/deploy")
+
+
+@server.tool()
+def deploy(product: str, target: str) -> dict:
+    """Propose deploying software/ to a target: copied there, its restart
+    command run, its log read back; the block records the commit."""
+    return act(f"Deploy to {target}", "POST", _p(product) + f"/deploy/{_q(target)}", {})
 
 
 @server.tool()

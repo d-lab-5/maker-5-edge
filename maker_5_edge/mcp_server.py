@@ -344,6 +344,51 @@ def repo_push(product: str, message: str) -> dict:
     return act(f"Push to GitHub: {message[:80]}", "POST", _p(product) + "/repo/push", {"message": message})
 
 
+# ---- the intake (ADR-0022): what was scanned at the shelf -------------------
+
+@server.tool()
+def intake_skill() -> str:
+    """How to describe what was scanned at the shelf: read the photo and the
+    note, reuse an article of the stock, and the rules of a suggestion. Read
+    it before intake_describe."""
+    from pathlib import Path
+    return (Path(__file__).with_name("skill") / "intake.md").read_text(encoding="utf-8")
+
+
+@server.tool()
+def intake_list(status: str = "") -> list:
+    """What was scanned at the shelf and waits: each item's id, its label
+    (code and family: m5 for maker parts, dhc for smart-home devices), the
+    shelf or box it went into, the note and count taken with it, how many
+    photos, what the label pointed at already (known), and its status (new,
+    described). status "all" for checked-in and dropped ones too."""
+    return _get("/api/intake?" + urllib.parse.urlencode(_clean(status=status)))
+
+
+@server.tool()
+def intake_item(item: str) -> list:
+    """One item of the intake with its photos, which you see: the item, the
+    article it names already (if any), then each photo."""
+    from mcp.server.mcpserver.utilities.types import Image
+    got = _get(f"/api/intake/{_q(item)}")
+    from . import materials as mt
+    out: list = [got]
+    for p in got.get("photos") or []:
+        out.append(Image(path=str(mt.photo(item, p["id"]))))
+    return out
+
+
+@server.tool()
+def intake_describe(item: str, suggestion: Dict[str, Any]) -> dict:
+    """Say what an item is; it stays a suggestion until the person checks it
+    in on the page. suggestion: {what: device | box | bulk, articleId (an
+    existing article, from stock()) or article {name, category ("top/sub"
+    from catalogue()), manufacturer, mpn, unit, note, datasheet}, serial,
+    qty, boxName, boxKind (box, bag, folder, drawer), sure {field: high |
+    medium | low}, note}. Read intake_skill() first."""
+    return web.call("POST", f"/api/intake/{_q(item)}/describe", {"suggestion": suggestion})
+
+
 @server.tool()
 def image_skill() -> str:
     """How to give a block its picture: the libraries first, then a drawing

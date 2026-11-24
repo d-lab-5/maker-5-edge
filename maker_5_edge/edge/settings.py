@@ -175,6 +175,10 @@ When a piece of work is
 done, propose repo_push(message): the person sees the diff and confirms.
 The repository is public: never write a secret, a password, a token, a
 private address or a person's e-mail into it.
+Before describing what was scanned at the shelf (the intake), call
+intake_skill(): it says how to read the photos, reuse an article of the
+stock, and what intake_describe() takes. Checking in is the person's, on the
+Intake tab.
 Before giving a block a picture, call image_skill(): it says how (the
 Fritzing and Wokwi libraries first, then a drawing of your own as SVG, with
 each pin marked) and what image_draw() checks.

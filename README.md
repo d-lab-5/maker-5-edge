@@ -103,6 +103,16 @@ over SSH with your own key, or this computer); **Deploy** copies `software/`
 there, runs the restart command, shows the log and records the commit on the
 board's block (ADR-0020). Hosts and users stay on this edge.
 
+**Intake** is what was scanned at the shelf (ADR-0022): on the phone, Scan →
+Intake, the shelf or box first, then label after label (M5 for maker parts,
+DHC for smart-home devices), with a photo or a note. **Describe with the
+agent** asks the chat to look at the photos with the `intake` skill
+(`maker_5_edge/skill/intake.md`), reuse articles of the stock and suggest
+each item: a device, a box of parts or loose parts. You open an item, change
+what is wrong and **Check in**: the cloud makes the article, the unit or the
+box, binds the label and closes the item in one step. The agent cannot
+check in or drop an item; the edge refuses both from it.
+
 Your work lives in `mymaker5docs/`, which git ignores and which follows the
 working directory: a folder per cloud, `mymaker5docs/prod/` and
 `mymaker5docs/stage/`, each synced with its own cloud alone (ADR-0013 in

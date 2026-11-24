@@ -55,6 +55,13 @@ evidence: the rules are in [part-image.md](part-image.md), which the
 `image_skill()` tool returns. A drawing marks each of the block's pins once
 with `data-pin`, and `image_draw` refuses one that does not.
 
+## The intake
+
+What was scanned at the shelf on the phone (ADR-0022): `intake_list()`,
+`intake_item(id)` with its photos, and `intake_describe(id, suggestion)`.
+How to describe an item is in [intake.md](intake.md), which `intake_skill()`
+returns. A person checks items in on the Intake tab; there is no tool for it.
+
 ## Files
 
 A file the person drops (on the Files tab, or on the chat with 📎) is kept in

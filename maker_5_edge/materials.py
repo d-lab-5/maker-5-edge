@@ -27,6 +27,12 @@ for it (edge/sync.py), else by NAME (edge/cloud.py space_slug).
                              (ADR-0018), which a person may ask back
     boxes(q, workspace)      the organisation's boxes (ADR-0011), read only
     box(code_or_id)          what a box holds, where it is, its links and files
+    intake(status)           what was scanned at the shelf (ADR-0022): open items
+    intake_item(id)          one item, its photos fetched once into a cache here
+    describe(id, suggestion) what an item is, as a suggestion (the agent may)
+    check_in(id, suggestion) an item into the stock, as the person decided on
+                             the page (never the agent)
+    drop(id)                 an item not to be checked in
 
 Boxes are checked in and out on a phone, at the shelf; this edge only reads
 them, so the bench can ask where a part is and where its firmware is.
@@ -34,9 +40,14 @@ them, so the bench can ask where a part is and where its firmware is.
 
 from __future__ import annotations
 
+import re
+import urllib.parse
+import urllib.request
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from .edge import cloud
+from .edge import knowledge as kn
 from .edge import sync as edge_sync
 
 STEPS = ("reserve", "release", "return")
@@ -173,3 +184,85 @@ def take(products: Any, p: str, step: str, article_id: str, qty: Optional[int] =
     else:
         body["qty"] = int(qty or 1)
     return cloud.call(f"materials/{step}", body, profile)
+
+
+# ---- the intake (ADR-0022 in maker-5-shared) ---------------------------------
+
+ITEM = re.compile(r"^i-[23456789abcdefghjkmnpqrstuvwxyz]{10}$")
+PHOTO = re.compile(r"^[0-9a-f]{12}$")
+MAX_PHOTO = 8 * 1024 * 1024
+
+
+def _item_id(item_id: str) -> str:
+    if not ITEM.match(item_id or ""):
+        raise ValueError(f"no intake item {item_id!r}")
+    return item_id
+
+
+def intake(status: str = "", profile: Optional[str] = None) -> List[Dict[str, Any]]:
+    """What was scanned at the shelf: open items (new, described), newest first; status "all" for every one."""
+    return cloud.call("materials/intake/list", {"status": status}, profile).get("items", [])
+
+
+def _cache(item_id: str) -> Path:
+    d = kn.scope_dir() / "intake" / _item_id(item_id)
+    d.mkdir(parents=True, exist_ok=True, mode=0o700)
+    return d
+
+
+def _fetch(url: str) -> bytes:
+    """A photo from the organisation's storage, by its signed link (https, S3 only)."""
+    u = urllib.parse.urlparse(url)
+    if u.scheme != "https" or not (u.hostname or "").endswith(".amazonaws.com"):
+        raise ValueError("a photo comes from the organisation's storage only")
+    with urllib.request.urlopen(url, timeout=30) as res:  # noqa: S310 - checked above
+        data = res.read(MAX_PHOTO + 1)
+    if len(data) > MAX_PHOTO:
+        raise ValueError("that photo is too large")
+    return data
+
+
+def intake_item(item_id: str, profile: Optional[str] = None) -> Dict[str, Any]:
+    """One item with its photos, which are fetched once and kept here (local paths, not links)."""
+    got = cloud.call("materials/intake/get", {"id": _item_id(item_id)}, profile)
+    d = _cache(item_id)
+    photos = []
+    for p in got.get("photos") or []:
+        if not PHOTO.match(str(p.get("id") or "")):
+            continue
+        f = d / f"{p['id']}.jpg"
+        if not f.exists():
+            f.write_bytes(_fetch(str(p.get("url") or "")))
+        photos.append({"id": p["id"], "type": p.get("type") or "image/jpeg", "size": f.stat().st_size})
+    return {"item": got.get("item") or {}, "photos": photos, "article": got.get("article")}
+
+
+def photo(item_id: str, photo_id: str) -> Path:
+    """A photo already fetched by intake_item(), for the page."""
+    if not PHOTO.match(photo_id or ""):
+        raise ValueError("no such photo")
+    f = _cache(item_id) / f"{photo_id}.jpg"
+    if not f.exists():
+        intake_item(item_id)
+    if not f.exists():
+        raise ValueError("no such photo")
+    return f
+
+
+def describe(item_id: str, suggestion: Dict[str, Any], profile: Optional[str] = None) -> Dict[str, Any]:
+    """What an item is: {what: device|box|bulk, articleId (an existing article) or article
+    {name, category, manufacturer, mpn, unit, note, datasheet}, serial, qty, boxName,
+    boxKind, sure {field: high|medium|low}, note}. Only a suggestion until it is checked in."""
+    return cloud.call("materials/intake/describe", {"id": _item_id(item_id), "suggestion": suggestion or {}}, profile)
+
+
+def check_in(item_id: str, suggestion: Optional[Dict[str, Any]] = None, profile: Optional[str] = None) -> Dict[str, Any]:
+    """The item into the stock, as described (or with the person's changes), in one step in the cloud."""
+    body: Dict[str, Any] = {"id": _item_id(item_id)}
+    if suggestion:
+        body["suggestion"] = suggestion
+    return cloud.call("materials/intake/checkin", body, profile)
+
+
+def drop(item_id: str, profile: Optional[str] = None) -> Dict[str, Any]:
+    return cloud.call("materials/intake/drop", {"id": _item_id(item_id)}, profile)

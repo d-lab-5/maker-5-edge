@@ -575,6 +575,52 @@ def resolve_code():
     return run(mt.resolve, request.args.get("code", ""))
 
 
+# ---- the intake: scanned at the shelf, described here, checked in (ADR-0022)
+
+def _by_agent() -> bool:
+    return bool(request.headers.get("X-Agent")) or request.headers.get("User-Agent", "").startswith("Werkzeug/")
+
+
+@app.get("/api/intake")
+def intake_list():
+    return run(mt.intake, request.args.get("status", ""))
+
+
+@app.get("/api/intake/<item>")
+def intake_item(item: str):
+    return run(mt.intake_item, item)
+
+
+@app.get("/api/intake/<item>/photos/<photo>.jpg")
+def intake_photo(item: str, photo: str):
+    try:
+        data = mt.photo(item, photo).read_bytes()
+    except ValueError:
+        abort(404)
+    return app.response_class(data, mimetype="image/jpeg", headers={"Cache-Control": "private, max-age=3600",
+                                                                     "X-Content-Type-Options": "nosniff"})
+
+
+@app.post("/api/intake/<item>/describe")
+def intake_describe(item: str):
+    return run(mt.describe, item, body().get("suggestion") or {})
+
+
+@app.post("/api/intake/<item>/checkin")
+def intake_check_in(item: str):
+    """A person's act on the page (ADR-0006, ADR-0022): refused from an agent."""
+    if _by_agent():
+        return jsonify({"errors": ["an item is checked in by a person, on the page"]}), 403
+    return run(mt.check_in, item, body().get("suggestion"))
+
+
+@app.post("/api/intake/<item>/drop")
+def intake_drop(item: str):
+    if _by_agent():
+        return jsonify({"errors": ["an item is dropped by a person, on the page"]}), 403
+    return run(mt.drop, item)
+
+
 @app.get("/api/products/<p>/bom")
 def bom(p: str):
     return run(mt.bom, products(), p)

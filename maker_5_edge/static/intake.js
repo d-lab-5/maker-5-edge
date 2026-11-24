@@ -4,7 +4,8 @@
  * The agent describes the items (intake skill); here the person looks at
  * each, changes what is wrong, and checks it in, or drops it. Checking in
  * and dropping are the person's: the agent has no tool for them, and the
- * edge refuses them from one.
+ * edge refuses them from one. The cloud checks in only for an admin of the
+ * organisation with two-step sign-in: the person who linked this edge.
  *
  *   window.intakeView.draw()   the tab
  */
@@ -106,6 +107,7 @@
       <div class="actions"><button value="drop" class="danger" formnovalidate>${esc(t("in.drop"))}</button>
         <button value="cancel" formnovalidate>${esc(t("model.cancel"))}</button>
         ${known ? "" : `<button value="save" formnovalidate>${esc(t("in.save"))}</button>`}
+        <small class="intake-admin">${esc(t("in.adminonly"))}</small>
         <button value="in" class="primary">${esc(t("in.checkIn"))}</button></div></div>`, (form, dlg) => {
       const q = (n) => form.querySelector(`[name="${n}"]`);
       const shown = () => {
@@ -162,7 +164,7 @@
           else if (b === "save") await core.api("POST", `/api/intake/${encodeURIComponent(id)}/describe`, { suggestion: sg });
           else {
             const r = await core.api("POST", `/api/intake/${encodeURIComponent(id)}/checkin`, sg ? { suggestion: sg } : {});
-            core.toast(t(`in.done.${r.kind}`, { place: x.placeName || "" }));
+            core.toast(t(known ? "in.done.moved" : `in.done.${r.kind}`, { place: x.placeName || "" }));
           }
         } catch (err) { core.toast(failed(err), true); return; }
         form.onsubmit = null;

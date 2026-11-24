@@ -110,7 +110,10 @@ agent** asks the chat to look at the photos with the `intake` skill
 (`maker_5_edge/skill/intake.md`), reuse articles of the stock and suggest
 each item: a device, a box of parts or loose parts. You open an item, change
 what is wrong and **Check in**: the cloud makes the article, the unit or the
-box, binds the label and closes the item in one step. The agent cannot
+box, binds the label and closes the item in one step. Checking in is an
+admin's: the edge does it only while the person who linked it is an admin of
+the organisation with two-step sign-in. Admins can also check in on the
+phone, under Materials → Intake. The agent cannot
 check in or drop an item; the edge refuses both from it.
 
 Your work lives in `mymaker5docs/`, which git ignores and which follows the

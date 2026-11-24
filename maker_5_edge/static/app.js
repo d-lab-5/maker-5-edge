@@ -30,6 +30,31 @@ function busyOn() {
 function busyOff() {
   if (busyN > 0 && --busyN === 0) { clearTimeout(busyT); $("#busy").hidden = true; }
 }
+// edge.js (linking, switching) shows the same card through core.busy
+window.core = window.core || {};
+if (!window.core.busy) window.core.busy = (d) => (d > 0 ? busyOn() : busyOff());
+
+/** The card while the edge works in the background (a sync, the first
+ *  start), then the page drawn again with what it brought. */
+let waitingJobs = false;
+async function whileJobs() {
+  if (waitingJobs) return;
+  waitingJobs = true;
+  let shown = false;
+  try {
+    for (let i = 0; i < 400; i++) {
+      const jobs = await core.api("GET", "/api/jobs").catch(() => []);
+      const on = (Array.isArray(jobs) ? jobs : jobs.jobs || []).some((j) => j.state === "queued" || j.state === "running");
+      if (!on) break;
+      if (!shown) { busyOn(); shown = true; }
+      await new Promise((r) => setTimeout(r, 700));
+    }
+  } finally {
+    if (shown) { busyOff(); S.seen = {}; refresh(); }
+    waitingJobs = false;
+  }
+}
+
 async function busy(work) {
   busyOn();
   try { return await (typeof work === "function" ? work() : work); } finally { busyOff(); }
@@ -74,8 +99,8 @@ async function drawList() {
     return;
   }
   box.innerHTML = list.map((p) =>
-    `<button data-ws="${esc(p.product)}" class="${p.product === S.ws ? "is-on" : ""}">
-       <span>${esc(p.title)}</span>
+    `<button data-ws="${esc(p.product)}" class="${p.product === S.ws ? "is-on" : ""}${p.gone ? " is-gone" : ""}"${p.gone ? ` title="${esc(t("list.goneTitle"))}"` : ""}>
+       <span>${esc(p.title)}${p.gone ? ` <small class="gone">${esc(t("list.gone"))}</small>` : ""}</span>
        <small>${esc(t("list.counts", { b: p.blocks, m: p.modules }))}${p.open_proposals ? ` · ${esc(t("list.open", { n: p.open_proposals }))}` : ""}</small>
      </button>`).join("");
   box.querySelectorAll("button[data-ws]").forEach((b) => b.onclick = () => select(b.dataset.ws));
@@ -105,10 +130,13 @@ function renameForm(head, title) {
   form.title.select();
 }
 
-function itemRow(x, sub) {
+function itemRow(x, sub, withPart) {
+  const line = x.article && S.bom ? S.bom.lines.find((l) => l.article === x.article) : null;
+  const part = x.article ? `<br><small class="part">🔩 ${esc(line && line.name ? line.name : x.article)}${x.quantity > 1 ? ` × ${x.quantity}` : ""}</small>` : "";
   return `<li data-item="${esc(x.id)}" class="${x.id === S.item ? "is-on" : ""}">
-    <span>${esc(x.name)} ${sub || ""}</span>
-    <span class="acts"><button class="rn" data-help="help.rename">${esc(t("model.rename"))}</button>
+    <span>${esc(x.name)} ${sub || ""}${part}</span>
+    <span class="acts">${withPart ? `<button class="pt" data-help="help.part">${esc(t("parts.part"))}</button>` : ""}
+      <button class="rn" data-help="help.rename">${esc(t("model.rename"))}</button>
       <button class="rm danger" data-help="help.remove">${esc(t("model.remove"))}</button></span></li>`;
 }
 
@@ -116,7 +144,13 @@ async function drawModel() {
   const box = $("#tab-model");
   if (!S.ws) { box.innerHTML = `<p class="note">${esc(t("model.choose"))}</p>`; return; }
   const m = await core.api("GET", P());
-  const key = JSON.stringify(m) + S.item + S.adding;
+  // the parts list asks the cloud: only when the model's links change, never on every poll
+  const links = JSON.stringify([...m.blocks, ...m.modules].map((x) => [x.article, x.quantity]));
+  if (S.bomFor !== S.ws + links) {
+    S.bomFor = S.ws + links;
+    S.bom = links.includes('"a-') ? await core.api("GET", `${P()}/bom`).catch(() => null) : null;
+  }
+  const key = JSON.stringify(m) + S.item + S.adding + JSON.stringify(S.bom);
   if (S.seen.model === key) return;
   if (box.contains(document.activeElement) && document.activeElement.matches("input, select, textarea")) return;  // not while typing
   S.seen.model = key;
@@ -131,21 +165,27 @@ async function drawModel() {
       <button class="primary">${esc(t("model.addIt"))}</button> <button type="button" class="cancel">${esc(t("model.cancel"))}</button></form>`;
   box.innerHTML = `
     <div class="ws-head"><h2>${esc(m.product.title)}</h2>
-      <button class="ws-rename" data-help="help.renameProduct">${esc(t("model.renameProduct"))}</button>
+      ${S.fromCloud ? "" : `<button class="ws-rename" data-help="help.renameProduct">${esc(t("model.renameProduct"))}</button>`}
+      <button class="ws-bom" data-help="help.bom">${esc(t("bom.import"))}</button>
+      ${m.blocks.length + m.modules.length + m.interfaces.length ? "" : `<button class="ws-migrate" data-help="help.mg">${esc(t("mg.button"))}</button>`}
       <a class="btn" download href="${P()}/export.ttl" data-help="help.export">${esc(t("model.export"))}</a></div>
     <p class="sub">${esc(t("model.sub", { n: m.triples }))}</p>
     <div class="cols">
       <section class="card"><header><h3>${esc(t("model.blocks"))}</h3><small>${m.blocks.length}</small></header>
-        <ul class="items">${m.blocks.map((b) => itemRow(b, b.kind ? `<span class="pill ${esc(b.kind)}">${esc(word("kind", b.kind))}</span>` : "")).join("")}</ul>
+        <ul class="items">${m.blocks.map((b) => itemRow(b, (b.kind ? `<span class="pill ${esc(b.kind)}">${esc(word("kind", b.kind))}</span>` : "")
+          + (b.supply ? ` <span class="pill supply-${esc(b.supply)}">${esc(t(`supply.${b.supply}`))}</span>` : ""), true)).join("")}</ul>
         ${addForm("block")}</section>
       <section class="card"><header><h3>${esc(t("model.modules"))}</h3><small>${m.modules.length}</small></header>
-        <ul class="items">${m.modules.map((x) => itemRow(x)).join("")}</ul>
+        <ul class="items">${m.modules.map((x) => itemRow(x, x.version ? `<small class="note">${esc(x.version)}</small>` : "", true)).join("")}</ul>
         ${addForm("module")}</section>
       <section class="card"><header><h3>${esc(t("model.interfaces"))}</h3><small>${m.interfaces.length}</small></header>
         <ul class="items">${m.interfaces.map((i) => itemRow(i, `<br><small>${i.connects.map((c) => esc(c.name)).join(" ↔ ")}</small>`)).join("")}</ul>
         ${ends.length >= 2 ? addForm("interface") : `<p class="note">${esc(t("model.needTwo"))}</p>`}</section>
-    </div>`;
-  box.querySelector(".ws-rename").onclick = (e) => renameForm(e.target.closest(".ws-head"), m.product.title);
+    </div>
+    ${drawParts()}`;
+  box.querySelector(".ws-bom").onclick = () => bomDialog();
+  if (box.querySelector(".ws-migrate")) box.querySelector(".ws-migrate").onclick = () => migrateDialog();
+  if (box.querySelector(".ws-rename")) box.querySelector(".ws-rename").onclick = (e) => renameForm(e.target.closest(".ws-head"), m.product.title);
   box.querySelectorAll("button.add").forEach((b) => b.onclick = () => { S.adding = b.dataset.add; S.seen.model = null; drawModel(); });
   box.querySelectorAll("form.add-form").forEach((f) => {
     f.name.focus();
@@ -180,6 +220,194 @@ async function drawModel() {
       });
     };
     li.querySelector(".rm").onclick = () => change("DELETE", `${P()}/items/${encodeURIComponent(id)}`, null, t("model.removed"));
+    const pt = li.querySelector(".pt");
+    if (pt) pt.onclick = () => partDialog(id, [...m.blocks, ...m.modules].find((x) => x.id === id));
+  });
+  box.querySelectorAll("button[data-reserve]").forEach((b) => b.onclick = async () => {
+    const r = await change("POST", `${P()}/parts/reserve`, { article: b.dataset.reserve, qty: Number(b.dataset.qty) }, t("parts.reserved"));
+    if (r) S.bomFor = null;
+  });
+}
+
+// ---------------------------------------------------------- a BOM in ----
+// A bill of materials in Markdown into the model (bom_import.py; ADR-0014 in
+// maker-5-shared): a preview first, then one revision. Articles the stock
+// lacks are proposed in the cloud, for an admin to accept on Materials.
+
+function bomDialog() {
+  core.dialog(t("bom.import"), `
+    <p class="note">${esc(t("bom.hint"))}</p>
+    <label>${esc(t("bom.file"))} <input type="file" name="file" accept=".md,.markdown,.txt,text/markdown,text/plain"></label>
+    <textarea name="text" rows="10" spellcheck="false" placeholder="${esc(t("bom.paste"))}"></textarea>
+    <div class="actions"><button value="cancel" formnovalidate>${esc(t("model.cancel"))}</button>
+      <button value="ok" class="primary">${esc(t("bom.preview"))}</button></div>`, (form, dlg) => {
+    form.querySelector('[name="file"]').onchange = async (e) => {
+      const f = e.target.files[0];
+      if (f) form.querySelector('[name="text"]').value = await f.text();
+    };
+    form.onsubmit = async (ev) => {
+      if (ev.submitter && ev.submitter.value === "cancel") { form.onsubmit = null; return; }
+      ev.preventDefault();
+      const text = form.querySelector('[name="text"]').value;
+      if (!text.trim()) return;
+      form.onsubmit = null;
+      dlg.close();
+      try {
+        const pv = await busy(() => core.api("POST", `${P()}/import/bom`, { text }));
+        bomPreview(pv);
+      } catch (err) { core.toast(failed(err), true); }
+    };
+  });
+}
+
+// ------------------------------------------------------------ migrate ----
+// An empty workspace filled from another connection's (stage → prod) or from
+// its repository: a dry run first, then the copy (migrate.py).
+
+async function migrateDialog() {
+  let src;
+  try { src = await core.api("GET", `${P()}/migrate`); } catch (err) { core.toast(failed(err), true); return; }
+  const opts = [...src.connections.map((c) => ({ v: JSON.stringify({ profile: c.profile, product: c.product }),
+    label: t("mg.from", { title: c.title, profile: c.profile, b: c.blocks, m: c.modules }) })),
+    ...(src.repo ? [{ v: JSON.stringify({ repo: true }), label: t("mg.fromRepo", { b: src.repo.blocks }) }] : [])];
+  if (!opts.length) { core.toast(t("mg.nothing"), true); return; }
+  core.dialog(t("mg.button"), `<p class="note">${esc(t("mg.what"))}</p>
+    <fieldset class="mg-src">${opts.map((o, i) => `<label><input type="radio" name="src" value="${esc(o.v)}" ${i ? "" : "checked"}> ${esc(o.label)}</label>`).join("")}</fieldset>
+    <div class="actions"><button value="cancel" formnovalidate>${esc(t("model.cancel"))}</button>
+      <button value="ok" class="primary">${esc(t("mg.preview"))}</button></div>`, (form, dlg) => {
+    form.onsubmit = async (ev) => {
+      form.onsubmit = null;
+      if (!ev.submitter || ev.submitter.value !== "ok") return;
+      ev.preventDefault();
+      const from = JSON.parse(form.querySelector('[name="src"]:checked').value);
+      dlg.close();
+      let pv;
+      try { pv = await busy(() => core.api("POST", `${P()}/migrate`, { from })); } catch (err) { core.toast(failed(err), true); return; }
+      migratePreview(from, pv);
+    };
+  });
+}
+
+function migratePreview(from, pv) {
+  const b = pv.brings;
+  core.dialog(t("mg.preview"), `
+    <p>${esc(t("mg.brings", { b: b.blocks, m: b.modules, i: b.interfaces, p: b.pins, w: b.wires }))}</p>
+    <p class="note">${esc(t("mg.stays"))}</p>
+    ${pv.refused ? `<p class="note warn">${esc(pv.refused)}</p>` : ""}
+    <div class="actions"><button value="cancel" formnovalidate>${esc(t("model.cancel"))}</button>
+      <button value="ok" class="primary" ${pv.refused ? "disabled" : ""}>${esc(t("mg.copy"))}</button></div>`, (form, dlg) => {
+    form.onsubmit = async (ev) => {
+      form.onsubmit = null;
+      if (!ev.submitter || ev.submitter.value !== "ok") return;
+      ev.preventDefault();
+      dlg.close();
+      try {
+        const r = await busy(() => core.api("POST", `${P()}/migrate`, { from, dry_run: false }));
+        core.toast(t("mg.done", { b: r.brings.blocks, m: r.brings.modules }) + (r.sync && r.sync !== "ok" ? ` ${t("mg.syncLater")}` : ""));
+        S.seen = {};
+        refresh();
+      } catch (err) { core.toast(failed(err), true); }
+    };
+  });
+}
+
+function bomPreview(pv) {
+  const art = (x) => x.article ? `🔩 ${esc(x.article.name)}` : x.propose ? esc(t("bom.new", { cat: word("cat", x.propose.category) })) : "";
+  const row = (x, i, what) => `<tr><td><input type="checkbox" data-${what}="${i}" ${x.include ? "checked" : ""}></td>
+    <td>${esc(x.name)}${x.supply ? ` <span class="pill supply-${esc(x.supply)}">${esc(t(`supply.${x.supply}`))}</span>` : ""}</td>
+    <td>${art(x)}${x.propose && what === "b" ? ` <label class="note"><input type="checkbox" data-art="${i}" ${x.include_article ? "checked" : ""}> ${esc(t("bom.propose"))}</label>` : ""}</td></tr>`;
+  const mods = pv.modules.map((x, i) => `<tr><td><input type="checkbox" data-m="${i}" ${x.include ? "checked" : ""}></td>
+    <td>${esc(x.name)} <small class="note">${esc(x.version)}</small></td><td>${x.runs_on ? esc(t("bom.runsOn", { on: x.runs_on })) : ""}</td></tr>`).join("");
+  core.dialog(t("bom.previewOf", { n: pv.blocks.length + pv.modules.length }), `
+    ${pv.stock_error ? `<p class="note warn">${esc(t("bom.noStock", { why: pv.stock_error }))}</p>` : ""}
+    <div class="bom-preview">
+      <h3>${esc(t("model.blocks"))}</h3>
+      <table>${pv.blocks.map((x, i) => row(x, i, "b")).join("") || `<tr><td class="note">${esc(t("bom.none"))}</td></tr>`}</table>
+      <h3>${esc(t("model.modules"))}</h3>
+      <table>${mods || `<tr><td class="note">${esc(t("bom.none"))}</td></tr>`}</table>
+      ${pv.tools.length ? `<h3>${esc(t("bom.tools"))}</h3><table>${pv.tools.map((x, i) => row(x, i, "t")).join("")}</table>` : ""}
+      ${pv.skipped.length ? `<p class="note">${esc(t("bom.skipped", { names: pv.skipped.join(", ") }))}</p>` : ""}
+    </div>
+    <div class="actions"><button value="cancel" formnovalidate>${esc(t("model.cancel"))}</button>
+      <button value="ok" class="primary">${esc(t("bom.create"))}</button></div>`, (form, dlg) => {
+    form.onsubmit = async (ev) => {
+      form.onsubmit = null;
+      if (ev.submitter && ev.submitter.value === "cancel") return;
+      ev.preventDefault();
+      const on = (sel) => form.querySelector(sel)?.checked ?? false;
+      pv.blocks.forEach((x, i) => { x.include = on(`[data-b="${i}"]`); x.include_article = on(`[data-art="${i}"]`); });
+      pv.modules.forEach((x, i) => { x.include = on(`[data-m="${i}"]`); });
+      pv.tools.forEach((x, i) => { x.include = on(`[data-t="${i}"]`); });
+      dlg.close();
+      try {
+        const r = await busy(() => core.api("POST", `${P()}/import/bom/apply`, { preview: pv }));
+        core.toast(t("bom.done", { b: r.made.blocks.length, m: r.made.modules.length, a: r.proposed.length }) + (r.propose_error ? ` ${t("bom.proposeFailed", { why: r.propose_error })}` : ""), Boolean(r.propose_error));
+        S.seen = {}; S.bomFor = null;
+        refresh();
+      } catch (err) { core.toast(failed(err), true); }
+    };
+  });
+}
+
+// -------------------------------------------------------------- parts ----
+// Which article of the workspace's stock each block and module is built from,
+// and what the product took (materials.py; ADR-0010 in maker-5-shared).
+
+function drawParts() {
+  const b = S.bom;
+  if (!b) return "";
+  if (b.error) return `<section class="card parts"><header><h3>${esc(t("parts.title"))}</h3></header><p class="note">${esc(b.error)}</p></section>`;
+  if (!b.lines.length) return "";
+  return `<section class="card parts"><header><h3>${esc(t("parts.title"))}</h3>
+      <small>${b.space ? esc(t("parts.from", { name: b.space.name })) : ""}</small></header>
+    <table class="files"><thead><tr><th>${esc(t("parts.article"))}</th><th class="num">${esc(t("parts.need"))}</th>
+      <th class="num">${esc(t("parts.reservedH"))}</th><th class="num">${esc(t("parts.used"))}</th><th class="num">${esc(t("parts.free"))}</th><th></th></tr></thead><tbody>
+    ${b.lines.map((l) => `<tr><td>${esc(l.name || l.article)}${l.known ? "" : ` <span class="pill">${esc(t("parts.unknown"))}</span>`}
+        <br><small>${esc(l.for.map((f) => f.name).join(", "))}</small>
+        ${l.units.length ? `<br><small>${l.units.map((u) => esc(u.serial || u.id)).join(", ")}</small>` : ""}</td>
+      <td class="num">${l.need}</td><td class="num">${l.reserved}</td><td class="num">${l.used}</td><td class="num">${l.free ?? "—"}</td>
+      <td>${l.missing && l.tracking === "bulk" && l.free ? `<button class="primary" data-reserve="${esc(l.article)}" data-qty="${Math.min(l.missing, l.free)}">${esc(t("parts.reserve", { n: Math.min(l.missing, l.free) }))}</button>`
+        : l.missing ? `<span class="pill warn">${esc(t("parts.missing", { n: l.missing }))}</span>` : `<span class="pill ok">✓</span>`}</td></tr>`).join("")}
+    </tbody></table>
+    ${b.lines.some((l) => l.missing && l.tracking === "serial") ? `<p class="note">${esc(t("parts.serialHint"))}</p>` : ""}</section>`;
+}
+
+/** Choose the article a block or module is built from: search the stock. */
+function partDialog(id, item) {
+  core.dialog(t("parts.choose", { name: item.name }), `
+    <label><input name="q" placeholder="${esc(t("parts.search"))}" autocomplete="off"></label>
+    <ul class="pick"></ul>
+    <label>${esc(t("parts.qty"))} <input name="qty" type="number" min="1" value="${item.quantity || 1}"></label>
+    <div class="actions"><button value="cancel" formnovalidate>${esc(t("model.cancel"))}</button>
+      ${item.article ? `<button value="unlink" formnovalidate>${esc(t("parts.unlink"))}</button>` : ""}</div>`, (form, dlg) => {
+    const q = form.querySelector('input[name="q"]');
+    const list = form.querySelector(".pick");
+    const qty = () => Number(form.querySelector('input[name="qty"]').value) || 1;
+    const choose = (article) => {
+      dlg.close();
+      S.bomFor = null;
+      change("POST", `${P()}/items/${encodeURIComponent(id)}/article`, { article, quantity: qty() }, t("parts.linked"));
+    };
+    let timer = null;
+    const search = () => {
+      clearTimeout(timer);
+      timer = setTimeout(async () => {
+        try {
+          const got = await core.api("GET", `/api/stock?q=${encodeURIComponent(q.value)}`);
+          list.innerHTML = got.length ? got.slice(0, 30).map((a) => `<li><button type="button" data-a="${esc(a.id)}">
+              <b>${esc(a.name)}</b> <small>${esc([a.manufacturer, a.mpn].filter(Boolean).join(" "))} · ${esc(t("parts.freeN", { n: a.free }))}</small></button></li>`).join("")
+            : `<li class="note">${esc(t("parts.none"))}</li>`;
+          list.querySelectorAll("button[data-a]").forEach((b) => b.onclick = () => choose(b.dataset.a));
+        } catch (err) { list.innerHTML = `<li class="note">${esc(failed(err))}</li>`; }
+      }, 200);
+    };
+    q.oninput = search;
+    form.onsubmit = (ev) => {
+      form.onsubmit = null;
+      if (ev.submitter && ev.submitter.value === "unlink") { ev.preventDefault(); choose(""); }
+    };
+    search();
+    q.focus();
   });
 }
 
@@ -415,7 +643,10 @@ async function refresh() {
   try {
     await drawList();
     if (S.tab === "files") return drawFiles();
+    if (S.tab === "intake") return window.intakeView.draw();     // the organisation's, not a workspace's
     if (S.tab === "model") await drawModel();
+    if (S.tab === "canvas") await window.canvasView.draw(P(), S.ws);
+    if (S.tab === "code") await window.codeView.draw(P(), S.ws);
     if (S.tab === "proposals") await drawProposals();
     if (S.tab === "history") await drawHistory();
   } catch (err) {
@@ -431,15 +662,29 @@ function wire() {
     S.seen = {};
     busy(refresh);
   });
-  $("#np-make").onclick = async () => {
+  // Workspaces are made in the cloud (ADR-0013): refresh pulls its list into
+  // this environment's folder; switching environment (edge.js) starts afresh.
+  $("#ws-refresh").onclick = async () => {
     try {
-      const got = await core.api("POST", "/api/products", { title: $("#np-title").value });
-      $("#np-title").value = "";
-      $(".new-ws").open = false;
-      select(got.product);
+      await core.api("POST", "/api/knowledge/sync", { all: true });
+      core.toast(t("side.refreshing"));
+      await whileJobs();
     } catch (err) { core.toast(failed(err), true); }
   };
-  $("#np-title").onkeydown = (e) => { if (e.key === "Enter") $("#np-make").click(); };
+  const cloudLink = async () => {
+    try {
+      const st = await core.api("GET", "/api/cloud");
+      const env = (st.environments || []).find((e) => e.current);
+      // a workspace's name is the cloud's: renamed there, not here
+      if (S.fromCloud !== Boolean(st.per_connection)) { S.fromCloud = Boolean(st.per_connection); S.seen = {}; refresh(); }
+      const a = $("#ws-cloud");
+      a.hidden = !(env && env.site);
+      if (env && env.site) a.href = env.site.replace(/\/$/, "") + "/settings/";
+    } catch { /* the link stays hidden */ }
+  };
+  cloudLink();
+  whileJobs();                                   // a sync started with the edge
+  window.addEventListener("edge:switched", () => { select(null); S.seen = {}; cloudLink(); refresh(); setTimeout(whileJobs, 300); });
   wireHelp();
   wireSide();
   wireChatAttach();

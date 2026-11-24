@@ -4,8 +4,8 @@
   "description": "The Maker-5 bench edge: products, their model of blocks, modules and interfaces, proposals, history and files, with a chat.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0d0f0e",
-  "theme_color": "#111614",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
   "icons": [
     { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
   ]

@@ -17,6 +17,7 @@ eggs/
 lib/
 lib64/
 parts/
+!maker_5_edge/parts/
 sdist/
 var/
 wheels/
@@ -237,3 +238,4 @@ temp/
 
 # the user's own documents never belong in the repository
 /mydocs/
+/mymaker5docs/

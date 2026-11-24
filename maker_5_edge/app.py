@@ -8,6 +8,11 @@ files given to the chat (inbox.py).
 
     maker-5-edge-web                       # http://127.0.0.1:8773
     maker-5-edge-web --port 9000
+    maker-5-edge-web --dir ~/maker5        # where mymaker5docs/ would be
+
+Each cloud connection has its own folder (ADR-0013 in maker-5-shared):
+mymaker5docs/prod/ and mymaker5docs/stage/, switched in the left bar. The
+workspaces are the cloud's; each gets its folder here when it is listed.
     python3 -m maker_5_edge.app            # the same, from a checkout
 
 The page, stop, restart, update and the About box come from core.server; the
@@ -18,17 +23,32 @@ Products, so the Maker-5 shapes refuse a broken model (422).
 from __future__ import annotations
 
 import argparse
+import os
 import sys
+import time
+from pathlib import Path
 
 from flask import abort, jsonify, render_template, request
 
+from . import bom_import
+from . import fritzing as fz
+from . import deploy as dp
+from . import drawing
+from . import git_repo
 from . import inbox as ib
+from . import materials as mt
+from . import migrate as mg
+from . import parts
 from . import products as pr
+from . import wokwi
 from . import revisions as rv
 from . import selection as sel
 from .core import server
 from .core import workspace as ws
+from .edge import cloud
 from .edge import knowledge as kn
+from .edge import settings as edge_settings
+from .edge import sync as edge_sync
 
 app = server.create_app(__name__)
 
@@ -76,6 +96,64 @@ def products() -> pr.Products:
     return _products
 
 
+def _switched() -> None:
+    """Another connection is current: its own folder, nothing open from the last one."""
+    global _products
+    _products = None
+    sel.set()
+    try:
+        pr.migrate_layout()
+    except OSError:
+        pass
+
+
+edge_routes.ON_SWITCH.append(_switched)
+
+
+def _cloud_site() -> str:
+    name = cloud.active_profile()
+    return str(cloud.load_state(name).get("site") or (getattr(edge_settings, "ENVIRONMENTS", {}) or {}).get(name) or "")
+
+
+# How often the page's list asks the cloud for its workspaces again, so a
+# rename or a new workspace there shows here without a restart.
+TENANT_FRESH_S = 30
+_tenant_seen: dict = {}
+
+
+def cloud_title(space: dict) -> str:
+    """A workspace's name as the cloud shows it: the shared one, while it keeps
+    its default name, is "Shared" (the cloud translates it)."""
+    name = space.get("name") or ""
+    return "Shared" if space.get("kind") == "shared" and name in ("Everyone", "Shared") else name
+
+
+def workspaces() -> list:
+    """The products here, as the cloud's workspaces: each workspace of the
+    current connection gets its folder (adopt), its title is the cloud's name
+    (a label: the folder and every id stay), and a product whose workspace was
+    removed in the cloud is marked gone (its files stay)."""
+    pp = products()
+    gone = set()
+    name = cloud.active_profile()
+    if cloud.per_connection() and name in cloud.linked_profiles():
+        try:
+            if time.time() - _tenant_seen.get(name, 0) > TENANT_FRESH_S:
+                cloud.tenant(name, refresh=True)
+                _tenant_seen[name] = time.time()
+            listed = edge_sync.listing(pp.kb)
+            pp.adopt(listed)
+            gone = {s["graph"] for s in listed if s["gone"]}
+            titles = {p["product"]: p["title"] for p in pp.products()}
+            for s in listed:
+                want = cloud_title(s)
+                if not s["gone"] and want and s["graph"] in titles and titles[s["graph"]] != want:
+                    pp.set_product(s["graph"], title=want)
+        except cloud.CloudError:
+            pass
+    return [{**p, "gone": p["product"] in gone} for p in pp.products()]
+
+
 def run(fn, *args, **kwargs):
     try:
         return jsonify(fn(*args, **kwargs))
@@ -83,6 +161,17 @@ def run(fn, *args, **kwargs):
         return jsonify({"errors": [str(e)]}), 404
     except kn.Invalid as e:
         return jsonify({"errors": e.messages}), 422
+    except mt.NoSpace as e:
+        return jsonify({"errors": [str(e)]}), 409
+    except cloud.NotLinked as e:
+        return jsonify({"errors": [f"this edge is not linked to a cloud yet: {e}"]}), 409
+    except cloud.CloudError as e:
+        # the cloud refused (422: not free, not taken) or failed: say its words
+        return jsonify({"errors": [str(e.payload.get("message") or e) if e.payload else str(e)]}), 422 if e.status == 422 else 502
+    except fz.FritzingError as e:
+        return jsonify({"errors": [str(e)]}), 502
+    except (git_repo.RepoError, dp.DeployError, mg.MigrateError) as e:
+        return jsonify({"errors": [str(e)]}), 409
     except (ValueError, TypeError) as e:
         return jsonify({"errors": [str(e)]}), 400
 
@@ -113,11 +202,15 @@ def set_selection():
 
 @app.get("/api/products")
 def list_products():
-    return run(products().products)
+    return run(workspaces)
 
 
 @app.post("/api/products")
 def new_product():
+    if cloud.per_connection():
+        site = _cloud_site()
+        return jsonify({"errors": [f"a workspace is made in the cloud ({site or 'its Settings'}), by an admin "
+                                   "of the organisation; it then appears here"], "site": site}), 409
     return run(products().new_product, **fields("title"))
 
 
@@ -128,7 +221,11 @@ def model(p: str):
 
 @app.post("/api/products/<p>")
 def set_product(p: str):
-    return run(products().set_product, p, **fields("title", "status"))
+    b = fields("title", "status")
+    if cloud.per_connection() and "title" in b:
+        return jsonify({"errors": ["a workspace is renamed in the cloud; its new name shows here by itself"],
+                        "site": _cloud_site()}), 409
+    return run(products().set_product, p, **b)
 
 
 @app.post("/api/products/<p>/blocks")
@@ -161,6 +258,398 @@ def remove(p: str, item: str):
     return run(products().remove, p, item)
 
 
+@app.post("/api/products/<p>/items/<item>/article")
+def link_article(p: str, item: str):
+    """Which article of the stock a block or module is built from (ADR-0010)."""
+    return run(products().link_article, p, item, **fields("article", "quantity"))
+
+
+# ---- a BOM into the model, and the hardware canvas (ADR-0014)
+
+def _bom_text() -> str:
+    b = body()
+    if b.get("inbox"):
+        out, offset = [], 0
+        while True:
+            part = ib.read(str(b["inbox"]), offset)
+            out.append(part["text"])
+            offset += len(part["text"])
+            if not part["more"] or offset > 400_000:
+                return "".join(out)
+    return str(b.get("text") or "")
+
+
+@app.post("/api/products/<p>/import/bom")
+def bom_preview(p: str):
+    """What importing this BOM (text, or a file in the inbox) would make. Writes nothing."""
+    return run(lambda: bom_import.preview(products(), p, _bom_text()))
+
+
+@app.post("/api/products/<p>/import/bom/apply")
+def bom_apply(p: str):
+    """Make what a reviewed preview says: proposed articles in the cloud, then one revision."""
+    return run(bom_import.apply, products(), p, body().get("preview") or {})
+
+
+@app.get("/api/products/<p>/canvas")
+def canvas(p: str):
+    return run(products().canvas, p)
+
+
+@app.post("/api/products/<p>/canvas/place")
+def canvas_place(p: str):
+    b = body()
+
+    def placed():
+        pp = products()
+        block = str(b.get("block") or "")
+        name = next((x["name"] for x in pp.model(p)["blocks"] if x["id"] == block), "")
+        return pp.place(p, block, b.get("x", 0), b.get("y", 0), default_pins=parts.pins_for(name)["pins"])
+    return run(placed)
+
+
+@app.post("/api/products/<p>/canvas/unplace")
+def canvas_unplace(p: str):
+    return run(products().unplace, p, str(body().get("block") or ""))
+
+
+@app.post("/api/products/<p>/canvas/notes")
+def canvas_notes(p: str):
+    b = body()
+    return run(products().notes, p, str(b.get("block") or ""), str(b.get("notes") or ""))
+
+
+@app.post("/api/products/<p>/canvas/pins")
+def canvas_pins(p: str):
+    b = body()
+    return run(products().set_pins, p, str(b.get("block") or ""), b.get("pins") or [])
+
+
+# ---- a workspace's model from stage or its repository (migrate.py; ADR-0013, amended)
+
+@app.get("/api/products/<p>/migrate")
+def migrate_sources(p):
+    return run(mg.sources, products(), p)
+
+
+@app.post("/api/products/<p>/migrate")
+def migrate_copy(p):
+    """A dry run unless {"dry_run": false}; {"from": {"profile", "product"} | {"repo": true}}."""
+    b = body()
+    src = b.get("from") if isinstance(b.get("from"), dict) else {}
+    if b.get("dry_run", True) is not False:
+        return run(mg.plan, products(), p, src)
+    return run(mg.copy, products(), p, src)
+
+
+# ---- the workspace's repository on GitHub (git_repo.py; ADR-0017)
+
+@app.get("/api/products/<p>/repo")
+def repo_status(p: str):
+    return run(git_repo.status, products(), p)
+
+
+@app.post("/api/products/<p>/repo/link")
+def repo_link(p: str):
+    b = body()
+    return run(git_repo.link, products(), p, str(b.get("existing") or ""), str(b.get("visibility") or ""))
+
+
+@app.get("/api/products/<p>/repo/diff")
+def repo_diff(p: str):
+    return run(git_repo.diff, products(), p)
+
+
+@app.post("/api/products/<p>/repo/push")
+def repo_push(p: str):
+    return run(git_repo.push, products(), p, str(body().get("message") or ""))
+
+
+@app.post("/api/products/<p>/repo/pull")
+def repo_pull(p: str):
+    return run(git_repo.pull, products(), p)
+
+
+@app.get("/api/products/<p>/repo/incoming")
+def repo_incoming(p: str):
+    return run(git_repo.incoming, products(), p)
+
+
+@app.post("/api/products/<p>/repo/incoming/take")
+def repo_incoming_take(p: str):
+    return run(git_repo.take_incoming, products(), p)
+
+
+@app.post("/api/products/<p>/repo/incoming/drop")
+def repo_incoming_drop(p: str):
+    return run(git_repo.drop_incoming, products(), p)
+
+
+@app.get("/api/products/<p>/repo/files")
+def repo_files(p: str):
+    return run(git_repo.files, products(), p)
+
+
+@app.get("/api/products/<p>/repo/file")
+def repo_read(p: str):
+    return run(git_repo.read, products(), p, request.args.get("path", ""))
+
+
+@app.post("/api/products/<p>/repo/file")
+def repo_write(p: str):
+    b = body()
+    return run(git_repo.write, products(), p, str(b.get("path") or ""), str(b.get("text") or ""))
+
+
+# ---- deploying software/ onto the boards (deploy.py; ADR-0020)
+
+@app.get("/api/products/<p>/deploy")
+def deploy_targets(p: str):
+    return run(dp.targets, products(), p)
+
+
+@app.post("/api/products/<p>/deploy/targets")
+def deploy_save(p: str):
+    """The page only: CHAT_ALLOWED leaves this out, so the chat never sets where code goes."""
+    return run(dp.save_target, products(), p, body())
+
+
+@app.delete("/api/products/<p>/deploy/targets/<ident>")
+def deploy_drop(p: str, ident: str):
+    return run(dp.drop_target, products(), p, ident)
+
+
+@app.post("/api/products/<p>/deploy/<ident>")
+def deploy_run(p: str, ident: str):
+    return run(dp.deploy, products(), p, ident)
+
+
+# ---- parts from the Fritzing library (fritzing.py; ADR-0016)
+
+@app.get("/api/fritzing/search")
+def fritzing_search():
+    """`for`: the block's name; the part the library here names for it comes first."""
+    def found():
+        hits = fz.search(request.args.get("q", ""), request.args.get("limit", 30, type=int))
+        best = parts.pins_for(request.args.get("for", "")).get("fritzing") if request.args.get("for") else ""
+        if best:
+            hits = [{"path": best, "name": fz._label(best), "folder": best.split("/", 1)[0], "suggested": True}] + [h for h in hits if h["path"] != best]
+        return hits
+    return run(found)
+
+
+@app.get("/api/fritzing/part")
+def fritzing_part():
+    return run(fz.part, request.args.get("path", ""))
+
+
+@app.get("/api/fritzing/image")
+def fritzing_image():
+    """A part's breadboard picture. The page shows it as an <image>, where an
+    SVG runs nothing; the policy below says so to any other reader too."""
+    try:
+        svg = fz.image(request.args.get("path", ""))
+    except (ValueError, fz.FritzingError):
+        abort(404)
+    if svg is None:
+        abort(404)
+    return app.response_class(svg, mimetype="image/svg+xml", headers={
+        "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; img-src data:",
+        "X-Content-Type-Options": "nosniff", "Cache-Control": "private, max-age=86400"})
+
+
+@app.post("/api/products/<p>/canvas/fritzing")
+def canvas_fritzing(p: str):
+    """A block takes a Fritzing part: its pins (and the part's name in the model)."""
+    b = body()
+
+    def used():
+        part = fz.part(str(b.get("path") or ""))
+        known = parts.pins_for(part["title"])
+        pins = parts.with_ports(parts.physical(part["pins"], known["pins"]), known["pins"]) if known["title"] else part["pins"]
+        return {**products().use_part(p, str(b.get("block") or ""), part["path"], pins),
+                "title": part["title"], "author": part["author"], "license": part["license"]}
+    return run(used)
+
+
+# ---- a block's picture (ADR-0021): Fritzing, Wokwi, drawn from its pins, or the agent's
+
+SVG_HEADERS = {"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; img-src data:",
+               "X-Content-Type-Options": "nosniff"}
+
+
+def _svg(data, cache: str = "private, no-cache"):
+    return app.response_class(data, mimetype="image/svg+xml", headers={**SVG_HEADERS, "Cache-Control": cache})
+
+
+@app.get("/api/wokwi/search")
+def wokwi_search():
+    return run(wokwi.search, request.args.get("q", ""), request.args.get("limit", 30, type=int))
+
+
+@app.get("/api/wokwi/part")
+def wokwi_part():
+    return run(wokwi.part, request.args.get("name", ""))
+
+
+@app.get("/api/wokwi/image")
+def wokwi_image():
+    try:
+        return _svg(wokwi.image(request.args.get("name", "")), "private, max-age=86400")
+    except ValueError:
+        abort(404)
+
+
+@app.get("/api/products/<p>/blocks/<b>/image.svg")
+def block_image(p: str, b: str):
+    """A block's drawn picture: the agent's, else one drawn from its pins."""
+    try:
+        block = next(x for x in products().canvas(p)["blocks"] if x["id"] == b)
+    except (StopIteration, pr.NotFound):
+        abort(404)
+    # ?drawn=1: the drawing from its pins, as the Image window previews it
+    svg = products().drawing(p, b) if block["image"]["kind"] == "agent" and not request.args.get("drawn") else ""
+    return _svg(svg or drawing.generated(block["name"], block["pins"]))
+
+
+@app.post("/api/products/<p>/canvas/image")
+def canvas_image(p: str):
+    """{block, kind: fritzing|wokwi|drawn|agent|none, ref?, svg?}: where the
+    block's picture comes from. A library part brings its pins (and the
+    board's ports, parts.with_ports); an agent's drawing is checked first."""
+    b = body()
+    kind, ref, block = str(b.get("kind") or ""), str(b.get("ref") or ""), str(b.get("block") or "")
+
+    def used():
+        P = products()
+        here = next((x for x in P.canvas(p)["blocks"] if x["id"] == block), None)
+        if here is None:
+            raise pr.NotFound(f"no block {block}")
+        if kind == "fritzing":
+            part = fz.part(ref)
+            known = parts.pins_for(here["name"])
+            pins = parts.with_ports(parts.physical(part["pins"], known["pins"]), known["pins"]) if known["title"] else part["pins"]
+            return {**P.use_image(p, block, "fritzing", part["path"], pins), "title": part["title"],
+                    "author": part["author"], "license": part["license"]}
+        if kind == "wokwi":
+            part = wokwi.part(ref)
+            known = parts.pins_for(here["name"])
+            pins = [{"n": x["n"], "name": x["name"], "role": x["role"]} for x in part["pins"]]
+            pins = parts.with_ports(pins, known["pins"]) if known["title"] else pins
+            return {**P.use_image(p, block, "wokwi", part["name"], pins), "title": part["title"], "license": part["license"]}
+        if kind == "agent":
+            svg = drawing.clean(str(b.get("svg") or ""), here["pins"])
+            return P.use_image(p, block, "agent", "", None, svg)
+        return P.use_image(p, block, kind)
+    return run(used)
+
+
+@app.post("/api/products/<p>/wires")
+def add_wire(p: str):
+    b = body()
+    return run(products().add_wire, p, str(b.get("from") or ""), str(b.get("to") or ""),
+               str(b.get("color") or ""), str(b.get("interface") or ""))
+
+
+@app.post("/api/products/<p>/wires/<wire>")
+def set_wire(p: str, wire: str):
+    return run(products().set_wire, p, wire, **fields("color", "interface"))
+
+
+# ---- parts: the workspace's stock in the cloud (materials.py)
+
+@app.get("/api/stock")
+def stock():
+    return run(mt.stock, request.args.get("q", ""), request.args.get("category", ""))
+
+
+@app.get("/api/catalogue")
+def catalogue():
+    return run(mt.catalogue)
+
+
+@app.get("/api/catalogue/free")
+def catalogue_free():
+    return run(mt.free_parts, request.args.get("category", ""))
+
+
+@app.get("/api/stock/<article_id>")
+def stock_article(article_id: str):
+    return run(mt.article, article_id)
+
+
+@app.get("/api/boxes")
+def stock_boxes():
+    return run(mt.boxes, request.args.get("q", ""), request.args.get("workspace", ""))
+
+
+@app.get("/api/boxes/<ref>")
+def stock_box(ref: str):
+    return run(mt.box, ref)
+
+
+@app.get("/api/codes/resolve")
+def resolve_code():
+    return run(mt.resolve, request.args.get("code", ""))
+
+
+# ---- the intake: scanned at the shelf, described here, checked in (ADR-0022)
+
+def _by_agent() -> bool:
+    return bool(request.headers.get("X-Agent")) or request.headers.get("User-Agent", "").startswith("Werkzeug/")
+
+
+@app.get("/api/intake")
+def intake_list():
+    return run(mt.intake, request.args.get("status", ""))
+
+
+@app.get("/api/intake/<item>")
+def intake_item(item: str):
+    return run(mt.intake_item, item)
+
+
+@app.get("/api/intake/<item>/photos/<photo>.jpg")
+def intake_photo(item: str, photo: str):
+    try:
+        data = mt.photo(item, photo).read_bytes()
+    except ValueError:
+        abort(404)
+    return app.response_class(data, mimetype="image/jpeg", headers={"Cache-Control": "private, max-age=3600",
+                                                                     "X-Content-Type-Options": "nosniff"})
+
+
+@app.post("/api/intake/<item>/describe")
+def intake_describe(item: str):
+    return run(mt.describe, item, body().get("suggestion") or {})
+
+
+@app.post("/api/intake/<item>/checkin")
+def intake_check_in(item: str):
+    """A person's act on the page (ADR-0006, ADR-0022): refused from an agent."""
+    if _by_agent():
+        return jsonify({"errors": ["an item is checked in by a person, on the page"]}), 403
+    return run(mt.check_in, item, body().get("suggestion"))
+
+
+@app.post("/api/intake/<item>/drop")
+def intake_drop(item: str):
+    if _by_agent():
+        return jsonify({"errors": ["an item is dropped by a person, on the page"]}), 403
+    return run(mt.drop, item)
+
+
+@app.get("/api/products/<p>/bom")
+def bom(p: str):
+    return run(mt.bom, products(), p)
+
+
+@app.post("/api/products/<p>/parts/<step>")
+def take_parts(p: str, step: str):
+    b = fields("article", "qty", "unit", "note")
+    return run(mt.take, products(), p, step, str(b.get("article", "")), b.get("qty"), b.get("unit"), str(b.get("note", "")))
+
+
 @app.post("/api/products/<p>/proposals")
 def propose(p: str):
     b = fields("title", "concerns", "agent")
@@ -178,6 +667,16 @@ def decide(p: str, item: str):
     return run(products().decide, p, item, **fields("decision", "note"))
 
 
+def _file_name(p: str) -> str:
+    """A download's name: the workspace's title as a slug ("door-bell"), not
+    its folder, which keeps the name it was first given."""
+    try:
+        title = next((x["title"] for x in products().products() if x["product"] == p), "")
+    except Exception:  # noqa: BLE001 - a name is never worth a failed download
+        title = ""
+    return cloud.space_slug(title) if title else p
+
+
 @app.get("/api/products/<p>/export.ttl")
 def export(p: str):
     try:
@@ -185,7 +684,7 @@ def export(p: str):
     except pr.NotFound:
         abort(404)
     return app.response_class(ttl, mimetype="text/turtle",
-                              headers={"Content-Disposition": f'attachment; filename="{p}.ttl"'})
+                              headers={"Content-Disposition": f'attachment; filename="{_file_name(p)}.ttl"'})
 
 
 # ---- history: every saved state, tags and baselines, compare, restore
@@ -201,7 +700,8 @@ def revision(p: str, ref: str):
         ttl = products().revision(p, ref)
     except pr.NotFound:
         abort(404)
-    return app.response_class(ttl, mimetype="text/turtle")
+    return app.response_class(ttl, mimetype="text/turtle",
+                              headers={"Content-Disposition": f'inline; filename="{_file_name(p)}-r{ref}.ttl"'})
 
 
 @app.get("/api/products/<p>/diff")
@@ -261,14 +761,37 @@ def inbox_remove(fid: str):
 
 # ------------------------------------------------------------------ main ----
 
+DATA_DIR = "mymaker5docs"
+
+
+def _move_old_folder(old: Path, new: Path) -> None:
+    """The products of an edge from before connections had their own folders
+    (./mydocs/<product>/) are prod's now: ./mymaker5docs/prod/. Never
+    overwrites; an empty old folder is just removed."""
+    if not old.is_dir() or old.resolve() == new.resolve():
+        return
+    if not any(old.iterdir()):
+        old.rmdir()
+        return
+    target = new / "prod"
+    if target.exists():
+        print(f"  {old}/ kept: {target}/ exists already, move what you need by hand", flush=True)
+        return
+    new.mkdir(parents=True, exist_ok=True)
+    os.replace(old, target)
+    print(f"  moved {old}/ to {target}/ (prod's folder)", flush=True)
+
+
 def main(argv: list | None = None) -> int:
     ap = argparse.ArgumentParser(prog="maker-5-edge-web",
                                  description=__doc__.strip().splitlines()[0])
     server.add_server_args(ap)
-    ap.add_argument("--dir", default=ws.FOLDERS[ws.USER].name,
-                    help="where products and their files live (default: ./mydocs)")
+    ap.add_argument("--dir", default=DATA_DIR,
+                    help=f"where products and their files live, a folder per connection (default: ./{DATA_DIR})")
     args = ap.parse_args(sys.argv[1:] if argv is None else argv)
 
+    if args.dir == DATA_DIR:
+        _move_old_folder(Path(ws.FOLDERS[ws.USER].name), Path(DATA_DIR))
     ws.configure(user_dir=args.dir)
     # One folder per product (ADR-0003 in maker-5-shared): the edge layer's routes and first
     # start build kn.KnowledgeBase() when called, so binding it here gives

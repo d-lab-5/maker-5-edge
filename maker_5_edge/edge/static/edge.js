@@ -2,6 +2,8 @@
 // The edge layer's panels, for any tool's page: put
 //   <section id="edge-connections"></section>
 //   <section id="edge-chat"></section>          (optional)
+//   <div id="edge-env"></div>                   (optional: the environment switch,
+//                                                with settings.SYNC_SCOPE = "per-connection")
 //   <script src="/edge-static/edge.js" defer></script>
 // in templates/index.html (scripts/edge-wire.py does it). Owned by the edge
 // layer; plain DOM, no framework, text never inserted as HTML.
@@ -33,14 +35,71 @@
     return data;
   }
   const host = (u) => { try { return new URL(u).host; } catch { return u || ""; } };
+  // Copy a pairing code. The Clipboard API needs a secure page (localhost is
+  // one); opened from another computer over plain http, fall back to a
+  // selection and the browser's copy command.
+  async function copyText(text) {
+    try { await navigator.clipboard.writeText(text); return true; } catch { /* below */ }
+    const ta = el("textarea", { readonly: true, style: "position:fixed;opacity:0" });
+    ta.value = text;
+    document.body.append(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch { ok = false; }
+    ta.remove();
+    return ok;
+  }
+  const copyButton = (code) => el("button", { type: "button", class: "edge-copy", "aria-label": `copy ${code}`,
+    "data-help": "Copy the code, to paste it on the cloud's /link page.",
+    on: { click: async (ev) => {
+      const b = ev.currentTarget;
+      const ok = await copyText(code);
+      b.textContent = ok ? "copied" : "select and copy";
+      setTimeout(() => { b.textContent = "copy"; }, 1600);
+    } } }, "copy");
+
+  // ------------------------------------------------------------ environment --
+  // prod, stage …: each its own folder and its own cloud. Switching tells the
+  // page with an "edge:switched" event; an environment not linked yet offers
+  // to link it (its site is enough: the cloud publishes its edge API).
+  const envBox = $("#edge-env");
+  function environments(st) {
+    if (!envBox) return;
+    const envs = st.environments || [];
+    if (!st.per_connection || !envs.length) { envBox.replaceChildren(); return; }
+    const cur = envs.find((e) => e.current) || envs[0];
+    const pick = el("select", { class: "edge-env-pick", "aria-label": "environment", disabled: st.here === false,
+      "data-help": "Which cloud this edge works with: each has its own folder here, and nothing passes between them.",
+      on: { change: (ev) => api("POST", "/api/cloud/use", { profile: ev.target.value })
+        .then(() => { window.dispatchEvent(new CustomEvent("edge:switched", { detail: ev.target.value })); return connections(); })
+        .catch((e) => { alert(e.message); connections(); }) } },
+      envs.map((e) => el("option", { value: e.name, selected: e.current }, `${e.linked ? "●" : "○"} ${e.name}${e.site ? ` · ${host(e.site)}` : ""}`)));
+    const linkIt = !cur.linked && st.here !== false && cur.site
+      ? el("button", { type: "button", class: "edge-env-link", "data-help": "Show a code that an admin approves on this cloud's /link page.",
+          on: { click: () => api("POST", "/api/cloud/link", { cloud: cur.site, profile: cur.name }).then(connections).catch((e) => alert(e.message)) } },
+          `link ${cur.name}`)
+      : null;
+    const pairing = st.link && st.link.state === "waiting" && st.link.profile === cur.name
+      ? el("small", { class: "edge-env-code" }, "code ", el("b", {}, st.link.user_code || "…"), " ",
+          st.link.user_code ? copyButton(st.link.user_code) : null)
+      : null;
+    envBox.replaceChildren(el("label", { class: "edge-env" }, pick), ...[linkIt, pairing].filter(Boolean));
+  }
 
   // ------------------------------------------------------------ connections --
   const box = $("#edge-connections");
   let poll = null;
+  let lastLinked = null;
   async function connections() {
-    if (!box) return;
+    if (!box && !envBox) return;
     let st;
-    try { st = await api("GET", "/api/cloud"); } catch (e) { box.replaceChildren(el("p", { class: "err" }, e.message)); return; }
+    try { st = await api("GET", "/api/cloud"); } catch (e) { if (box) box.replaceChildren(el("p", { class: "err" }, e.message)); return; }
+    environments(st);
+    // a pairing that just finished: the page reloads its lists for the new connection
+    const linkedNow = JSON.stringify((st.environments || []).map((e) => e.linked));
+    if (lastLinked !== null && lastLinked !== linkedNow) window.dispatchEvent(new CustomEvent("edge:switched", { detail: st.profile }));
+    lastLinked = linkedNow;
+    if (!box) { clearTimeout(poll); if (st.link && st.link.state === "waiting") poll = setTimeout(connections, 3000); return; }
     const rows = Object.entries(st.profiles || {}).map(([name, c]) => el("li", { class: `edge-conn${name === st.profile ? " is-current" : ""}` },
       el("span", { class: `edge-dot ${c.linked ? "ok" : "off"}`, title: c.linked ? "linked" : "not linked" }, "●"), " ",
       c.site ? el("a", { href: c.site, target: "_blank", rel: "noopener noreferrer", class: "edge-site", title: `Open ${host(c.site)}` }, el("b", {}, host(c.site)))
@@ -59,11 +118,12 @@
       api("POST", "/api/cloud/link", { cloud: f.cloud.value.trim(), profile: f.profile.value.trim() || null })
         .then(connections).catch((e) => alert(e.message));
     } } },
-      el("input", { name: "cloud", placeholder: "edge API address (the cloud's About page)", required: true, size: 48 }),
+      el("input", { name: "cloud", placeholder: "the cloud's address, e.g. https://… (or its edge API)", required: true, size: 48 }),
       el("input", { name: "profile", placeholder: "name, e.g. prod", pattern: "[a-z][a-z0-9-]{0,31}", size: 10 }),
       el("button", { type: "submit", "data-help": "Show a code that an admin of your tenant approves on the cloud's /link page. No password is typed here." }, "+ Add connection"));
     const pairing = link.state === "waiting" ? el("p", { class: "edge-pairing" },
-      "Ask an admin of your tenant to approve code ", el("b", {}, link.user_code || "…"), " on ",
+      "Ask an admin of your tenant to approve code ", el("b", {}, link.user_code || "…"), " ",
+      link.user_code ? copyButton(link.user_code) : null, " on ",
       el("a", { href: link.url, target: "_blank", rel: "noopener noreferrer" }, host(link.url)), ".")
       : link.state === "failed" ? el("p", { class: "err" }, link.error) : null;
     const away = el("p", { class: "edge-muted" }, "Connections are added, chosen and forgotten on the computer the edge runs on.");

@@ -1,0 +1,650 @@
+{
+ "_comment": "Pin layouts the hardware canvas gives a block when it is placed (ADR-0014 in maker-5-shared). The first entry with a word of `match` in the block's name wins; a block keeps the pins it got and they can be edited. Add parts here, as data.",
+ "parts": [
+  {
+   "title": "Raspberry Pi 1 Model B (26-pin header)",
+   "match": [
+    "raspberry pi 1",
+    "pi 1 model b",
+    "pi 1 b",
+    "raspberry pi b rev2",
+    "raspberry pi model b",
+    "pi b rev2"
+   ],
+   "pins": [
+    {
+     "n": 1,
+     "name": "3V3",
+     "role": "power"
+    },
+    {
+     "n": 2,
+     "name": "5V",
+     "role": "power"
+    },
+    {
+     "n": 3,
+     "name": "GPIO2 SDA",
+     "role": "data"
+    },
+    {
+     "n": 4,
+     "name": "5V",
+     "role": "power"
+    },
+    {
+     "n": 5,
+     "name": "GPIO3 SCL",
+     "role": "data"
+    },
+    {
+     "n": 6,
+     "name": "GND",
+     "role": "ground"
+    },
+    {
+     "n": 7,
+     "name": "GPIO4",
+     "role": "signal"
+    },
+    {
+     "n": 8,
+     "name": "GPIO14 TXD",
+     "role": "data"
+    },
+    {
+     "n": 9,
+     "name": "GND",
+     "role": "ground"
+    },
+    {
+     "n": 10,
+     "name": "GPIO15 RXD",
+     "role": "data"
+    },
+    {
+     "n": 11,
+     "name": "GPIO17",
+     "role": "signal"
+    },
+    {
+     "n": 12,
+     "name": "GPIO18",
+     "role": "signal"
+    },
+    {
+     "n": 13,
+     "name": "GPIO27",
+     "role": "signal"
+    },
+    {
+     "n": 14,
+     "name": "GND",
+     "role": "ground"
+    },
+    {
+     "n": 15,
+     "name": "GPIO22",
+     "role": "signal"
+    },
+    {
+     "n": 16,
+     "name": "GPIO23",
+     "role": "signal"
+    },
+    {
+     "n": 17,
+     "name": "3V3",
+     "role": "power"
+    },
+    {
+     "n": 18,
+     "name": "GPIO24",
+     "role": "signal"
+    },
+    {
+     "n": 19,
+     "name": "GPIO10 MOSI",
+     "role": "data"
+    },
+    {
+     "n": 20,
+     "name": "GND",
+     "role": "ground"
+    },
+    {
+     "n": 21,
+     "name": "GPIO9 MISO",
+     "role": "data"
+    },
+    {
+     "n": 22,
+     "name": "GPIO25",
+     "role": "signal"
+    },
+    {
+     "n": 23,
+     "name": "GPIO11 SCLK",
+     "role": "data"
+    },
+    {
+     "n": 24,
+     "name": "GPIO8 CE0",
+     "role": "data"
+    },
+    {
+     "n": 25,
+     "name": "GND",
+     "role": "ground"
+    },
+    {
+     "n": 26,
+     "name": "GPIO7 CE1",
+     "role": "data"
+    },
+    {
+     "n": 27,
+     "name": "USB 1",
+     "role": "data",
+     "side": "bottom"
+    },
+    {
+     "n": 28,
+     "name": "USB 2",
+     "role": "data",
+     "side": "bottom"
+    },
+    {
+     "n": 29,
+     "name": "Ethernet",
+     "role": "data",
+     "side": "bottom"
+    },
+    {
+     "n": 30,
+     "name": "Audio out",
+     "role": "audio",
+     "side": "bottom"
+    },
+    {
+     "n": 31,
+     "name": "Video out",
+     "role": "video",
+     "side": "bottom"
+    },
+    {
+     "n": 32,
+     "name": "5V in (micro USB)",
+     "role": "power",
+     "side": "bottom"
+    }
+   ],
+   "fritzing": "core/Raspberry_Pi_B(rev2).fzp"
+  },
+  {
+   "title": "Optocoupler PC817",
+   "match": [
+    "pc817",
+    "optocoupler"
+   ],
+   "pins": [
+    {
+     "n": 1,
+     "name": "Anode",
+     "role": "signal"
+    },
+    {
+     "n": 2,
+     "name": "Cathode",
+     "role": "signal"
+    },
+    {
+     "n": 3,
+     "name": "Emitter",
+     "role": "signal"
+    },
+    {
+     "n": 4,
+     "name": "Collector",
+     "role": "signal"
+    }
+   ]
+  },
+  {
+   "title": "LM386 amplifier board",
+   "match": [
+    "lm386"
+   ],
+   "pins": [
+    {
+     "n": 1,
+     "name": "VCC",
+     "role": "power"
+    },
+    {
+     "n": 2,
+     "name": "GND",
+     "role": "ground"
+    },
+    {
+     "n": 3,
+     "name": "IN",
+     "role": "audio"
+    },
+    {
+     "n": 4,
+     "name": "IN GND",
+     "role": "ground"
+    },
+    {
+     "n": 5,
+     "name": "OUT+",
+     "role": "audio"
+    },
+    {
+     "n": 6,
+     "name": "OUT-",
+     "role": "audio"
+    }
+   ]
+  },
+  {
+   "title": "Step-down converter",
+   "match": [
+    "step-down",
+    "buck",
+    "dc-dc"
+   ],
+   "pins": [
+    {
+     "n": 1,
+     "name": "IN+",
+     "role": "power"
+    },
+    {
+     "n": 2,
+     "name": "IN-",
+     "role": "ground"
+    },
+    {
+     "n": 3,
+     "name": "OUT+",
+     "role": "power"
+    },
+    {
+     "n": 4,
+     "name": "OUT-",
+     "role": "ground"
+    }
+   ]
+  },
+  {
+   "title": "DIN-rail power supply",
+   "match": [
+    "din-rail",
+    "dr-60",
+    "power supply"
+   ],
+   "pins": [
+    {
+     "n": 1,
+     "name": "L",
+     "role": "power"
+    },
+    {
+     "n": 2,
+     "name": "N",
+     "role": "power"
+    },
+    {
+     "n": 3,
+     "name": "PE",
+     "role": "ground"
+    },
+    {
+     "n": 4,
+     "name": "V+",
+     "role": "power"
+    },
+    {
+     "n": 5,
+     "name": "V-",
+     "role": "ground"
+    }
+   ]
+  },
+  {
+   "title": "4-wire door station",
+   "match": [
+    "door station"
+   ],
+   "pins": [
+    {
+     "n": 1,
+     "name": "Red VCC",
+     "role": "power"
+    },
+    {
+     "n": 2,
+     "name": "White audio + call",
+     "role": "audio"
+    },
+    {
+     "n": 3,
+     "name": "Black GND",
+     "role": "ground"
+    },
+    {
+     "n": 4,
+     "name": "Yellow video",
+     "role": "video"
+    }
+   ]
+  },
+  {
+   "title": "4-wire cable",
+   "match": [
+    "4-wire",
+    "intercom cable"
+   ],
+   "pins": [
+    {
+     "n": 1,
+     "name": "A red",
+     "role": "power"
+    },
+    {
+     "n": 2,
+     "name": "A white",
+     "role": "audio"
+    },
+    {
+     "n": 3,
+     "name": "A black",
+     "role": "ground"
+    },
+    {
+     "n": 4,
+     "name": "A yellow",
+     "role": "video"
+    },
+    {
+     "n": 5,
+     "name": "B red",
+     "role": "power"
+    },
+    {
+     "n": 6,
+     "name": "B white",
+     "role": "audio"
+    },
+    {
+     "n": 7,
+     "name": "B black",
+     "role": "ground"
+    },
+    {
+     "n": 8,
+     "name": "B yellow",
+     "role": "video"
+    }
+   ]
+  },
+  {
+   "title": "Coupling capacitor",
+   "match": [
+    "capacitor"
+   ],
+   "pins": [
+    {
+     "n": 1,
+     "name": "+",
+     "role": "audio"
+    },
+    {
+     "n": 2,
+     "name": "-",
+     "role": "audio"
+    }
+   ]
+  },
+  {
+   "title": "USB sound card",
+   "match": [
+    "sound card"
+   ],
+   "pins": [
+    {
+     "n": 1,
+     "name": "USB",
+     "role": "data"
+    },
+    {
+     "n": 2,
+     "name": "Line out",
+     "role": "audio"
+    },
+    {
+     "n": 3,
+     "name": "Mic in",
+     "role": "audio"
+    }
+   ]
+  },
+  {
+   "title": "Video converter to HDMI",
+   "match": [
+    "converter ahd",
+    "4-in-1",
+    "cvbs → hdmi",
+    "cvbs -> hdmi"
+   ],
+   "pins": [
+    {
+     "n": 1,
+     "name": "Video in",
+     "role": "video"
+    },
+    {
+     "n": 2,
+     "name": "GND",
+     "role": "ground"
+    },
+    {
+     "n": 3,
+     "name": "12V",
+     "role": "power"
+    },
+    {
+     "n": 4,
+     "name": "GND",
+     "role": "ground"
+    },
+    {
+     "n": 5,
+     "name": "HDMI out",
+     "role": "video"
+    }
+   ]
+  },
+  {
+   "title": "USB video grabber",
+   "match": [
+    "grabber",
+    "ms2109"
+   ],
+   "pins": [
+    {
+     "n": 1,
+     "name": "USB",
+     "role": "data"
+    },
+    {
+     "n": 2,
+     "name": "HDMI / video in",
+     "role": "video"
+    }
+   ]
+  },
+  {
+   "title": "MOSFET or relay",
+   "match": [
+    "mosfet",
+    "relay"
+   ],
+   "pins": [
+    {
+     "n": 1,
+     "name": "VCC",
+     "role": "power"
+    },
+    {
+     "n": 2,
+     "name": "GND",
+     "role": "ground"
+    },
+    {
+     "n": 3,
+     "name": "IN",
+     "role": "signal"
+    },
+    {
+     "n": 4,
+     "name": "COM",
+     "role": "power"
+    },
+    {
+     "n": 5,
+     "name": "NO",
+     "role": "power"
+    },
+    {
+     "n": 6,
+     "name": "NC",
+     "role": "power"
+    }
+   ]
+  },
+  {
+   "title": "Terminal block",
+   "match": [
+    "terminal block"
+   ],
+   "pins": [
+    {
+     "n": 1,
+     "name": "1",
+     "role": "signal"
+    },
+    {
+     "n": 2,
+     "name": "2",
+     "role": "signal"
+    },
+    {
+     "n": 3,
+     "name": "3",
+     "role": "signal"
+    },
+    {
+     "n": 4,
+     "name": "4",
+     "role": "signal"
+    }
+   ]
+  },
+  {
+   "title": "Push button",
+   "match": [
+    "button"
+   ],
+   "pins": [
+    {
+     "n": 1,
+     "name": "A",
+     "role": "signal"
+    },
+    {
+     "n": 2,
+     "name": "B",
+     "role": "signal"
+    }
+   ]
+  },
+  {
+   "title": "USB hub",
+   "match": [
+    "usb hub"
+   ],
+   "pins": [
+    {
+     "n": 1,
+     "name": "Upstream",
+     "role": "data"
+    },
+    {
+     "n": 2,
+     "name": "Port 1",
+     "role": "data"
+    },
+    {
+     "n": 3,
+     "name": "Port 2",
+     "role": "data"
+    },
+    {
+     "n": 4,
+     "name": "Port 3",
+     "role": "data"
+    },
+    {
+     "n": 5,
+     "name": "Port 4",
+     "role": "data"
+    },
+    {
+     "n": 6,
+     "name": "Power in",
+     "role": "power"
+    }
+   ]
+  },
+  {
+   "title": "Phone",
+   "match": [
+    "phone",
+    "android"
+   ],
+   "pins": [
+    {
+     "n": 1,
+     "name": "USB",
+     "role": "data"
+    },
+    {
+     "n": 2,
+     "name": "Wi-Fi",
+     "role": "data"
+    }
+   ]
+  },
+  {
+   "title": "Ethernet",
+   "match": [
+    "ethernet cable"
+   ],
+   "pins": [
+    {
+     "n": 1,
+     "name": "End A",
+     "role": "data"
+    },
+    {
+     "n": 2,
+     "name": "End B",
+     "role": "data"
+    }
+   ]
+  }
+ ]
+}

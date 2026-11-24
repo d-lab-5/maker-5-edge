@@ -19,8 +19,8 @@ PACKAGE = "maker_5_edge"
 TITLE = "Maker-5 Edge"
 KIND = "human"                 # human | iot | robot
 CLOUD_NAME = "Maker-5"          # "the Mediathek", "DigitalHome" …
-TENANT_NOUN = "workspace"        # what people call a tenant here
-SPACE_NOUN = "product"          # … and a space
+TENANT_NOUN = "organisation"     # what people call a tenant here
+SPACE_NOUN = "workspace"         # … and a space: a project or a product in development
 ENV = "MAKER5_EDGE"                 # MAKER5_EDGE_EDGE_STATE, MAKER5_EDGE_CHAT_CONFIRM …
 
 # The client id and scope this edge asks for when it pairs (DH-SPEC-100).
@@ -45,10 +45,32 @@ PER_LANGUAGE: List[str] = [
     "http://www.w3.org/2004/02/skos/core#prefLabel",
 ]
 
+# -- connections: prod and stage, each its own (ADR-0013 in maker-5-shared) ---
+
+# Each connection its own folder (mymaker5docs/prod/, mymaker5docs/stage/),
+# synced with its own cloud alone: nothing passes between stage and prod here.
+# The left bar switches between them.
+SYNC_SCOPE = "per-connection"
+
+# The two clouds, by their sites: linking one needs only this (the cloud
+# publishes its edge API at /.well-known/dlab5-edge.json). prod comes first.
+ENVIRONMENTS: Dict[str, str] = {
+    "prod": "https://maker5.cloud",
+    "stage": "https://stage.maker5.cloud",
+}
+
 # -- the chat (a local Claude Code with only this edge's MCP tools) -----------
 
 # What a proposal from the chat may run on this edge's own API: (method, path
 # regex). Nothing else can be proposed. Add the tool's own routes here.
+# A workspace's design and code on GitHub (git_repo.py; ADR-0017 in
+# maker-5-shared): made in this organisation with the person's own gh login.
+# The cloud keeps only the link; stock, prices and people stay there.
+GITHUB_ORG = "maker-5-platform"
+REPO_VISIBILITY = "public"
+LICENSE_SOFTWARE = "GPL-3.0-only"
+LICENSE_HARDWARE = "CERN-OHL-S-2.0"
+
 CHAT_ALLOWED: List[Tuple[str, str]] = [
     ("POST", r"/api/jobs/[\w-]{1,40}/cancel"),
     ("POST", r"/api/cloud/link"),
@@ -60,7 +82,18 @@ CHAT_ALLOWED: List[Tuple[str, str]] = [
     ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/(blocks|modules|interfaces|proposals)"),
     ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/interfaces/i-[a-z0-9]{8}/connects"),
     ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/items/(b|m|i|pr)-[a-z0-9]{8}/rename"),
-    ("DELETE", r"/api/products/[a-z][a-z0-9-]{0,39}/items/(b|m|i|pr)-[a-z0-9]{8}"),
+    ("DELETE", r"/api/products/[a-z][a-z0-9-]{0,39}/items/(b|m|i|pr|w)-[a-z0-9]{8}"),
+    # a BOM into the model, and the hardware canvas (ADR-0014 in maker-5-shared)
+    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/import/bom/apply"),
+    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/canvas/(place|unplace|pins|notes|fritzing|image)"),
+    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/wires(/w-[a-z0-9]{8})?"),
+    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/items/(b|m)-[a-z0-9]{8}/article"),
+    # parts from the workspace's stock (ADR-0010 in maker-5-shared)
+    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/parts/(reserve|release|return)"),
+    # the workspace's repository (ADR-0017): software/ files, and a push the person confirms
+    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/repo/(file|push|incoming/take)"),
+    # deploy software/ to a target the person set up (ADR-0020); never set a target
+    ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/deploy/t-[0-9a-f]{8}"),
     # history: name a revision, make a baseline, go back to one (as a new revision)
     ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/revisions/([0-9]{1,5}|latest)/(tag|restore)"),
     # never here: /proposals/<id>/decide, which a person does on the page (ADR-0006 in maker-5-shared)
@@ -97,6 +130,62 @@ diff() says what changed between two (numbers or tag names), tag_revision()
 names one, restore() goes back to one as a new revision. A frozen tag is a
 baseline, e.g. "Prototype A"; propose one only for a state the person calls a
 prototype or a release.
+
+Parts come from the {tenant}'s stock in the cloud, which its workspaces
+share. Reuse before buying: for a part a design needs, look at catalogue()
+and free_parts(category) first and prefer a free article, then one a passive
+workspace holds (say which, and that a person releases it there). Only when
+nothing fits propose a new article (an import_bom() does), and say why the
+stock has none. stock() searches it
+(articles with on hand, reserved, free), resolve_code() says what a scanned
+code is. link_article() says which article a block or module is built from
+and how many; bom() then lists what the product needs against what it took
+and what is free. reserve_parts(), release_parts() and return_parts() take
+parts for the product or give them back; each waits for Confirm, and the
+cloud refuses what is not free. A product here is the cloud workspace of
+the same name. Never invent an article id: take it from
+stock(). Adding articles, receiving stock and printing labels are done by a
+person on the cloud's Stock page.
+
+Hardware is drawn on the page's Hardware canvas (ADR-0014): canvas() gives
+each block's place and pins (ids <block>.<number>, names like GPIO17, a
+role: power, ground, signal, audio, video, data) and the wires between pins.
+To realise a design, propose in this order, one change at a time: the blocks
+that are missing (add_block, with link_article to a stock article), their
+place (place(): x to the right, y down, in mm-like units; a part is about 190
+wide, leave 80 between parts, signal flowing left to right), pins where a
+part has none or the wrong ones (set_pins), then the wires (wire(), with a
+colour: red for power, black for ground). Check a pin's name and role in
+canvas() before wiring it: never guess a pin id. Say which wires you would
+draw and why before proposing them; a BOM in Markdown is import_bom().
+Code for a board takes its pins from software/generated/pins.py (one class
+per board, a constant per wired GPIO, named after what it goes to), written
+from the wiring on every push: import it, never write a GPIO number by
+hand; if a pin is missing, wire it on the canvas first.
+The workspace's code is in its GitHub repository (repo_status(): linked or
+not; repo_files(), repo_read(path)). Write code with repo_write(path, text),
+only under software/ (hardware/ is written from the model on every push);
+one file per proposal, a whole file each time. If repo_status() says
+"incoming", someone changed hardware/model.ttl on GitHub: show it with
+repo_incoming() and propose repo_take_incoming(); no push goes out before.
+To run it on a board, deploy_targets() lists the boards the person set up
+(on the Code tab); propose deploy(target) and read the log it returns. You
+never add or change a target.
+When a piece of work is
+done, propose repo_push(message): the person sees the diff and confirms.
+The repository is public: never write a secret, a password, a token, a
+private address or a person's e-mail into it.
+Before describing what was scanned at the shelf (the intake), call
+intake_skill(): it says how to read the photos, reuse an article of the
+stock, and what intake_describe() takes. Checking in is the person's, on the
+Intake tab.
+Before giving a block a picture, call image_skill(): it says how (the
+Fritzing and Wokwi libraries first, then a drawing of your own as SVG, with
+each pin marked) and what image_draw() checks.
+A part of the Fritzing parts library gives a block its real pinout:
+fritzing_search() finds parts by words of their name ("PC817", "Raspberry Pi
+B rev2"), fritzing_part() shows one's pins, fritzing_use() proposes it for a
+block. Prefer it to inventing pins; name the part you chose.
 
 Privacy: what this edge keeps private never reaches you. Names you see are
 the {tenant}'s; use them only to answer.""".format(

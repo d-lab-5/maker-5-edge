@@ -7,7 +7,7 @@ repos, CAD/PCB artifacts and hardware telemetry with the cloud.
 
 It runs on your workstation or lab bench and pairs securely with the Maker-5
 cloud ([maker-5-cloud](https://github.com/d-lab-5/maker-5-cloud), at
-maker-5.cloud) using the device flow: the edge shows a code, and an admin of
+maker5.cloud) using the device flow: the edge shows a code, and an admin of
 your workspace approves it. It then watches local Git repositories, CAD/PCB
 schematics, firmware builds and connected test hardware, and syncs what it
 learns with the cloud's semantic graph in both directions. The page and the
@@ -44,9 +44,93 @@ sends nothing about you, is cached for six hours, and is skipped silently when
 there is no network. `--no-update-check` turns it off. **Restart** and **Stop**
 are only accepted from this machine.
 
-Notes live in two folders: `mydocs/` for your own, which git
-ignores and which follows the working directory, and the samples that ship
-inside the package. A save goes back to the folder the note came from.
+**Import BOM** on a workspace reads a bill of materials written in Markdown
+(`## Hardware` / `## Software`, `###` groups, a table in each) into its model:
+blocks with their supply (there, in hand, to buy), software modules with
+their versions, and, after a preview, the articles the stock lacks, proposed
+in the cloud for an admin to accept on Materials. The **Hardware** tab is the
+canvas: place the blocks, which get the pins of their part
+(`maker_5_edge/parts/library.json`, with a board's USB, video, audio,
+Ethernet and power ports), and click two pins to wire them. **Image** beside
+a block gives it a picture (ADR-0021):
+- **Fritzing:** a part of the Fritzing parts library, with its real pins,
+  fetched from GitHub when you pick it and kept in `mymaker5docs/fritzing/`.
+  The library is CC BY-SA 3.0, so it is never part of this repository, and
+  the canvas credits it.
+- **Wokwi:** breadboard pictures of common boards and parts from the Wokwi
+  elements (MIT), shipped in `maker_5_edge/parts/wokwi/` and made with
+  `scripts/wokwi-snapshot.mjs`, so nothing is fetched.
+- **From its pins:** a plain drawing of the block's own pins.
+- **By the agent:** the chat draws it as SVG with the `part-image` skill
+  (`maker_5_edge/skill/part-image.md`); each pin is checked before it is kept.
+
+A library part brings its pins; a board's ports stay. **Pictures** in the canvas bar hides them all.
+
+Wires find their own way around the parts (`static/route.js`, and
+`maker_5_edge/route.py` for `hardware/wiring.svg`, the same rules): on a grid,
+few bends, apart from each other, and a half-circle hop where two cross.
+Click a part to select it: it is lit in the list and its wires stand out.
+Right-click a part, or its name in the list, for its menu: picture, pins,
+notes, rename, remove its wires, or take it off the canvas (its pins and wires stay).
+
+A pin sits on the left, the right or the bottom of its part (`m5:pinSide`), in
+the place it is listed there (`m5:pinPlace`): the pins window has a box for each
+side. A pin with no side follows the old rule (a long header odd left and even
+right). A board's ports go to the bottom. A block's notes are its
+`schema:description`: rest on a part for a second to see them with its pins,
+and *Save and ask the agent* writes them into the chat as a request. Pins,
+wires and positions are in the model, so they sync and the chat can read and
+propose them (ADR-0014 in maker-5-shared).
+
+The **Code** tab keeps a workspace's design and code in its own GitHub
+repository, open source (ADR-0017 in maker-5-shared). **Link to GitHub**
+makes `maker-5-platform/<workspace>` with your own login (the GitHub CLI,
+`gh auth login`) and clones it into the workspace's folder. `software/` is
+yours and the agent's to write; `hardware/` (the model without stock links,
+the wiring as SVG, a netlist and a parts list) is written from the model on
+every push. **Review and push** shows everything a push publishes and
+refuses tokens, keys and e-mail addresses. Stock, places, prices, people and
+chats stay in the cloud, which keeps only the link. The chat finds free and
+idle parts with `catalogue()` and `free_parts()` before it proposes buying
+any (ADR-0018, ADR-0019).
+
+**Copy a model in** fills an empty workspace once: from the same workspace
+in your other connection (stage into a new prod workspace), or from its
+GitHub repository's `hardware/model.ttl`. It shows a dry run first and
+brings only the open model; stock links, proposals and the history stay with
+their cloud (ADR-0013). Linking an existing repository to an empty
+workspace does the same by itself.
+
+If someone changes `hardware/model.ttl` on GitHub, **Pull** notices and the
+Code tab offers to bring those statements into the model, or to keep the
+model; no push goes out before. `software/generated/pins.py` is the pin map,
+written from the wiring: a class per board and a constant per wired GPIO, for
+the code to import. Under **Boards** you set where the software runs (a host
+over SSH with your own key, or this computer); **Deploy** copies `software/`
+there, runs the restart command, shows the log and records the commit on the
+board's block (ADR-0020). Hosts and users stay on this edge.
+
+**Intake** is what was scanned at the shelf (ADR-0022): on the phone, Scan →
+Intake, the shelf or box first, then label after label (M5 for maker parts,
+DHC for smart-home devices), with a photo or a note. **Describe with the
+agent** asks the chat to look at the photos with the `intake` skill
+(`maker_5_edge/skill/intake.md`), reuse articles of the stock and suggest
+each item: a device, a box of parts or loose parts. You open an item, change
+what is wrong and **Check in**: the cloud makes the article, the unit or the
+box, binds the label and closes the item in one step. Checking in is an
+admin's: the edge does it only while the person who linked it is an admin of
+the organisation with two-step sign-in. Admins can also check in on the
+phone, under Materials → Intake. The agent cannot
+check in or drop an item; the edge refuses both from it.
+
+Your work lives in `mymaker5docs/`, which git ignores and which follows the
+working directory: a folder per cloud, `mymaker5docs/prod/` and
+`mymaker5docs/stage/`, each synced with its own cloud alone (ADR-0013 in
+maker-5-shared). The left bar switches between them; one not linked yet
+offers to link it, with only the cloud's site (maker5.cloud, or
+stage.maker5.cloud). Workspaces are made in the cloud and appear here, each
+with its own folder. An older `mydocs/` becomes `mymaker5docs/prod/` on the
+first start.
 
 ## Installing without a clone
 

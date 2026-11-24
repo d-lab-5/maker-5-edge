@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import argparse
 import urllib.parse
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from mcp.server.mcpserver import MCPServer
 
@@ -42,7 +42,15 @@ server = MCPServer(
         "confirms each one. Record a larger idea as propose(): only the person "
         "approves or rejects a proposal, on the page. Every saved state is a "
         "revision: revisions(), diff(), tag_revision(), restore(). Files the "
-        "person drops for you are in inbox(); read them with read_file()."
+        "person drops for you are in inbox(); read them with read_file(). "
+        "Parts: stock(), resolve_code(), link_article(), bom(), "
+        "reserve_parts(), release_parts(), return_parts(). Boxes (read "
+        "only): boxes(), box(). A BOM in Markdown: import_bom(). Hardware "
+        "wiring: canvas(), place(), set_pins(), wire(); remove a wire with remove(). "
+        "Fritzing parts: fritzing_search(), fritzing_part(), fritzing_use(). "
+        "A block's picture: image_skill() first, then wokwi_search(), image_use(), image_draw(). "
+        "Code on GitHub: repo_status(), repo_files(), repo_read(), repo_write(), repo_push(), "
+        "repo_incoming(), repo_take_incoming(). On boards: deploy_targets(), deploy()."
     ),)
 
 web.add_core_tools(server)
@@ -111,15 +119,17 @@ def read_file(file: str, offset: int = 0, limit: int = 20000) -> dict:
 
 @server.tool()
 def new_product(title: str) -> dict:
-    """Start a product. Its id is minted (p-xxxxxxxx) and never changes; the
-    title can."""
+    """Start a product on an edge without a cloud of its own. On this edge
+    workspaces are made in the cloud by an admin and appear here by
+    themselves (refused here: say so, and point to the cloud's Settings)."""
     return act(f"New product “{title}”", "POST", "/api/products", {"title": title})
 
 
 @server.tool()
 def set_product(product: str, title: str = "", status: str = "") -> dict:
-    """Rename a product (its id and folder stay) or set its status: active,
-    done or archived."""
+    """Set a product's status: active, done or archived. Its name is the
+    cloud workspace's and changes there (a rename here is refused); its id
+    and folder never change."""
     return act(f"Update product {product}", "POST", _p(product), _clean(title=title, status=status))
 
 
@@ -171,6 +181,347 @@ def propose(product: str, title: str, concerns: Optional[List[str]] = None) -> d
     rejects it, on the page; there is no tool for that."""
     return act(f"Propose “{title}”", "POST", _p(product) + "/proposals",
                _clean(title=title, concerns=list(concerns or []) or None))
+
+
+# --------------------------------------------------------------- parts ----
+# The organisation's stock lives in the cloud (ADR-0008, ADR-0010 in maker-5-shared).
+
+@server.tool()
+def stock(query: str = "", category: str = "") -> list:
+    """The organisation's stock, shared by its workspaces: articles (id, name, category, maker, part
+    number, place) with onHand, reserved and free. Search by words; a
+    category is a code of catalogue(), a top one ("controllers") or a sub one
+    ("controllers/sbc"); a top one holds its subs."""
+    return _get("/api/stock?" + urllib.parse.urlencode(_clean(q=query, category=category)))
+
+
+@server.tool()
+def catalogue() -> list:
+    """The stock's categories (two levels: code "top" or "top/sub", label in
+    en, de, fr) with how many articles each has and how many are free. Look
+    here first to see what the organisation has."""
+    return _get("/api/catalogue")
+
+
+@server.tool()
+def free_parts(category: str = "") -> dict:
+    """What a new design can use before anything is bought: articles with
+    free stock in a category, and parts that passive workspaces hold
+    (reserved, but no edge used that workspace in 14 days), which a person
+    may release there and take here."""
+    return _get("/api/catalogue/free?" + urllib.parse.urlencode(_clean(category=category)))
+
+
+@server.tool()
+def stock_article(article: str) -> dict:
+    """One article of the stock: its units (serial, state, product, firmware),
+    its codes, which products took it, and what happened to it."""
+    return _get(f"/api/stock/{_q(article)}")
+
+
+@server.tool()
+def boxes(query: str = "", workspace: str = "") -> list:
+    """The organisation's boxes (cartons, bags, drawers with a large label):
+    name, kind, where it is (place, or the box it sits in), the workspace it
+    is marked for, and how many links and files it keeps. Search by words;
+    give a workspace (a product's title) for only its boxes."""
+    return _get("/api/boxes?" + urllib.parse.urlencode(_clean(q=query, workspace=workspace)))
+
+
+@server.tool()
+def box(box: str) -> dict:
+    """One box, by its id (x-…) or the code on its label: the boxes it sits
+    in, what it holds (units with what is installed in them, counted parts,
+    other boxes), its links (firmware, CAD, schematic, datasheet, docs, repo)
+    and its files, and what happened to it. Read only: parts are checked in
+    and out on a phone, at the box."""
+    return _get(f"/api/boxes/{_q(box)}")
+
+
+@server.tool()
+def resolve_code(code: str) -> dict:
+    """What a code points at: one of our labels (HTTPS://MAKER5.CLOUD/T/…),
+    an EAN/GTIN, a GS1 DataMatrix (GTIN and serial), a manufacturer's QR
+    text, a serial number, nfc:<uid>. Returns its status (article, unit, box,
+    blank, unknown) and the id; a product's barcode names the article."""
+    return _get("/api/codes/resolve?" + urllib.parse.urlencode({"code": code}))
+
+
+@server.tool()
+def link_article(product: str, item: str, article: str, quantity: int = 1) -> dict:
+    """Say which article of the stock a block or module is built from, and
+    how many one product needs. An empty article removes the link."""
+    return act(f"Build {item} from {article or 'nothing'}" + (f" × {quantity}" if article and quantity != 1 else ""),
+               "POST", _p(product) + f"/items/{_q(item)}/article", {"article": article, "quantity": int(quantity or 1)})
+
+
+@server.tool()
+def import_bom(product: str, file: str = "", text: str = "") -> dict:
+    """Import a bill of materials written as Markdown (## Hardware / ##
+    Software, ### groups, a table in each) into a product: a file the person
+    gave you (its inbox id) or the text. Shows what it would make, then asks
+    the person to confirm: blocks with their supply (there, in hand, to buy),
+    software modules with versions, and the articles the stock lacks, which
+    are proposed in the cloud for an admin to accept."""
+    web.ensure_server()
+    pv = web.call("POST", _p(product) + "/import/bom", {"inbox": file} if file else {"text": text})
+    if not isinstance(pv, dict) or "blocks" not in pv:
+        return pv
+    n = len(pv["blocks"]) + len(pv["modules"])
+    new = sum(1 for b in pv["blocks"] + pv["tools"] if b.get("propose") and b.get("include_article", True))
+    return act(f"Import the BOM: {len(pv['blocks'])} blocks, {len(pv['modules'])} modules"
+               + (f", propose {new} articles" if new else "") + (f"; skip {len(pv['skipped'])} already there" if pv["skipped"] else ""),
+               "POST", _p(product) + "/import/bom/apply", {"preview": pv}) if n or new else {"nothing": "every row is in the model already", **pv}
+
+
+@server.tool()
+def canvas(product: str) -> dict:
+    """The hardware canvas: each block's place, notes and pins (ids
+    <block>.<n>, names like GPIO17, roles, side left/right/bottom and place
+    on it), and the wires between pins."""
+    return _get(_p(product) + "/canvas")
+
+
+@server.tool()
+def repo_status(product: str) -> dict:
+    """The workspace's GitHub repository: linked or not, its address and
+    branch, the files changed since the last push, ahead and behind."""
+    return _get(_p(product) + "/repo")
+
+
+@server.tool()
+def repo_incoming(product: str) -> dict:
+    """What others changed in hardware/model.ttl on GitHub and the model does
+    not have yet: the statements added and removed, and their commits."""
+    return _get(_p(product) + "/repo/incoming")
+
+
+@server.tool()
+def repo_take_incoming(product: str) -> dict:
+    """Propose bringing the GitHub changes into the model, in one revision."""
+    return act("Bring the GitHub changes into the model", "POST", _p(product) + "/repo/incoming/take", {})
+
+
+@server.tool()
+def deploy_targets(product: str) -> list:
+    """The boards the person set up to deploy to: id, block, host (or this
+    computer), folder, restart and log commands, and the last deployment."""
+    return _get(_p(product) + "/deploy")
+
+
+@server.tool()
+def deploy(product: str, target: str) -> dict:
+    """Propose deploying software/ to a target: copied there, its restart
+    command run, its log read back; the block records the commit."""
+    return act(f"Deploy to {target}", "POST", _p(product) + f"/deploy/{_q(target)}", {})
+
+
+@server.tool()
+def repo_files(product: str) -> list:
+    """The repository's files: path, size, tracked, and whether you may write
+    it (only software/; hardware/ is written from the model)."""
+    return _get(_p(product) + "/repo/files")
+
+
+@server.tool()
+def repo_read(product: str, path: str) -> dict:
+    """One file of the repository, as text."""
+    return _get(_p(product) + "/repo/file?" + urllib.parse.urlencode({"path": path}))
+
+
+@server.tool()
+def repo_write(product: str, path: str, text: str) -> dict:
+    """Propose a file under software/, whole: it is written when the person
+    confirms, and published with the next push. The repository is public."""
+    return act(f"Write {path}", "POST", _p(product) + "/repo/file", {"path": path, "text": text})
+
+
+@server.tool()
+def repo_push(product: str, message: str) -> dict:
+    """Propose a push: hardware/ is written again from the model, everything
+    is checked for secrets and e-mail addresses, committed with this message
+    and pushed with the person's GitHub login."""
+    return act(f"Push to GitHub: {message[:80]}", "POST", _p(product) + "/repo/push", {"message": message})
+
+
+# ---- the intake (ADR-0022): what was scanned at the shelf -------------------
+
+@server.tool()
+def intake_skill() -> str:
+    """How to describe what was scanned at the shelf: read the photo and the
+    note, reuse an article of the stock, and the rules of a suggestion. Read
+    it before intake_describe."""
+    from pathlib import Path
+    return (Path(__file__).with_name("skill") / "intake.md").read_text(encoding="utf-8")
+
+
+@server.tool()
+def intake_list(status: str = "") -> list:
+    """What was scanned at the shelf and waits: each item's id, its label
+    (code and family: m5 for maker parts, dhc for smart-home devices), the
+    shelf or box it went into, the note and count taken with it, how many
+    photos, what the label pointed at already (known), and its status (new,
+    described). status "all" for checked-in and dropped ones too."""
+    return _get("/api/intake?" + urllib.parse.urlencode(_clean(status=status)))
+
+
+@server.tool()
+def intake_item(item: str) -> list:
+    """One item of the intake with its photos, which you see: the item, the
+    article it names already (if any), then each photo."""
+    from mcp.server.mcpserver.utilities.types import Image
+    got = _get(f"/api/intake/{_q(item)}")
+    from . import materials as mt
+    out: list = [got]
+    for p in got.get("photos") or []:
+        out.append(Image(path=str(mt.photo(item, p["id"]))))
+    return out
+
+
+@server.tool()
+def intake_describe(item: str, suggestion: Dict[str, Any]) -> dict:
+    """Say what an item is; it stays a suggestion until the person checks it
+    in on the page. suggestion: {what: device | box | bulk, articleId (an
+    existing article, from stock()) or article {name, category ("top/sub"
+    from catalogue()), manufacturer, mpn, unit, note, datasheet}, serial,
+    qty, boxName, boxKind (box, bag, folder, drawer), sure {field: high |
+    medium | low}, note}. Read intake_skill() first."""
+    return web.call("POST", f"/api/intake/{_q(item)}/describe", {"suggestion": suggestion})
+
+
+@server.tool()
+def image_skill() -> str:
+    """How to give a block its picture: the libraries first, then a drawing
+    from evidence, with the rules image_draw checks. Read it before image_use
+    or image_draw."""
+    from pathlib import Path
+    return (Path(__file__).with_name("skill") / "part-image.md").read_text(encoding="utf-8")
+
+
+@server.tool()
+def wokwi_search(q: str) -> list:
+    """Breadboard pictures of common boards and parts (the Wokwi elements,
+    MIT): [{name, title, pins}], best matches first."""
+    return _get("/api/wokwi/search?" + urllib.parse.urlencode({"q": q}))
+
+
+@server.tool()
+def wokwi_part(name: str) -> dict:
+    """One Wokwi element: its title, licence and pins [{n, name, role, x, y}]
+    (x and y as fractions of the picture)."""
+    return _get("/api/wokwi/part?" + urllib.parse.urlencode({"name": name}))
+
+
+@server.tool()
+def image_use(product: str, block: str, kind: str, ref: str = "") -> dict:
+    """Propose a block's picture: kind fritzing (ref: the part's path), wokwi
+    (ref: the element's name), drawn (from its pins) or none. A library part
+    brings its pins; the board's ports stay."""
+    return act(f"Give {block} a picture ({kind}{' ' + ref if ref else ''})", "POST", _p(product) + "/canvas/image",
+               {"block": block, "kind": kind, "ref": ref})
+
+
+@server.tool()
+def image_draw(product: str, block: str, svg: str) -> dict:
+    """Propose your SVG drawing of a block. It must follow image_skill()'s
+    rules: shapes and text only, a viewBox, each of the block's pins marked
+    once with data-pin="<n>". A refusal says what to fix."""
+    from . import drawing
+    pins = next((b["pins"] for b in _get(_p(product) + "/canvas")["blocks"] if b["id"] == block), None)
+    if pins is None:
+        return {"errors": [f"no block {block}"]}
+    try:
+        drawing.clean(svg, pins)                                  # refused here, before it is proposed
+    except drawing.DrawingError as e:
+        return {"errors": [str(e)]}
+    return act(f"Draw {block} ({len(svg)} characters of SVG)", "POST", _p(product) + "/canvas/image",
+               {"block": block, "kind": "agent", "svg": svg})
+
+
+@server.tool()
+def fritzing_search(q: str) -> list:
+    """Parts of the Fritzing parts library whose name has every word: [{path,
+    name, folder}], core parts first. The library is fetched from GitHub."""
+    return _get("/api/fritzing/search?" + urllib.parse.urlencode({"q": q}))
+
+
+@server.tool()
+def fritzing_part(path: str) -> dict:
+    """One Fritzing part: its title, authors, licence and pins [{n, name, role}]."""
+    return _get("/api/fritzing/part?" + urllib.parse.urlencode({"path": path}))
+
+
+@server.tool()
+def fritzing_use(product: str, block: str, path: str) -> dict:
+    """Propose that a block takes a Fritzing part: its pins replace the
+    block's (a wired pin must stay) and the canvas shows its picture."""
+    return act(f"Give {block} the Fritzing part {path}", "POST", _p(product) + "/canvas/fritzing",
+               {"block": block, "path": path})
+
+
+@server.tool()
+def place(product: str, block: str, x: int, y: int) -> dict:
+    """Propose where a block sits on the hardware canvas (x right, y down).
+    Placed for the first time, it gets the pins of its part from the parts
+    library. The person confirms it."""
+    return act(f"Place {block} at {int(x)}, {int(y)}", "POST", _p(product) + "/canvas/place",
+               {"block": block, "x": int(x), "y": int(y)})
+
+
+@server.tool()
+def wire(product: str, pin_from: str, pin_to: str, color: str = "", interface: str = "") -> dict:
+    """Propose a wire between two pins (ids from canvas()), in a colour,
+    optionally as part of an interface. The person confirms it."""
+    return act(f"Wire {pin_from} → {pin_to}" + (f" ({color})" if color else ""), "POST", _p(product) + "/wires",
+               {"from": pin_from, "to": pin_to, "color": color, "interface": interface})
+
+
+@server.tool()
+def set_pins(product: str, block: str, pins: List[Dict]) -> dict:
+    """Propose a block's pins: [{n, name, role, side}] with role power, ground,
+    signal, audio, video or data, and side left, right or bottom (on a side
+    the pins follow their numbers; without one a long header has its odd pins
+    left and even right). A wired pin cannot be dropped."""
+    return act(f"Set {len(pins)} pins on {block}", "POST", _p(product) + "/canvas/pins", {"block": block, "pins": pins})
+
+
+@server.tool()
+def set_notes(product: str, block: str, notes: str) -> dict:
+    """Propose a block's notes (what it is for, how it is wired, what to
+    check), at most 1000 characters; empty removes them. canvas() gives them."""
+    return act(f"Notes on {block}", "POST", _p(product) + "/canvas/notes", {"block": block, "notes": notes})
+
+
+@server.tool()
+def bom(product: str) -> dict:
+    """The product's parts list: per article, what the model needs, what the
+    product reserved and used, how many are free, and what is missing."""
+    return _get(_p(product) + "/bom")
+
+
+def _parts(step: str, product: str, article: str, qty: int, unit: str, note: str) -> dict:
+    what = f"unit {unit}" if unit else f"{int(qty or 1)} × {article}"
+    return act(f"{step.capitalize()} {what} for {product}", "POST", _p(product) + f"/parts/{step}",
+               _clean(article=article, qty=None if unit else int(qty or 1), unit=unit, note=note))
+
+
+@server.tool()
+def reserve_parts(product: str, article: str, qty: int = 1, unit: str = "", note: str = "") -> dict:
+    """Put parts aside for the product: a quantity of a bulk article, or one
+    unit of a serialised article. The cloud refuses what is not free."""
+    return _parts("reserve", product, article, qty, unit, note)
+
+
+@server.tool()
+def release_parts(product: str, article: str, qty: int = 1, unit: str = "", note: str = "") -> dict:
+    """Give a reservation back to the stock."""
+    return _parts("release", product, article, qty, unit, note)
+
+
+@server.tool()
+def return_parts(product: str, article: str, qty: int = 1, unit: str = "", note: str = "") -> dict:
+    """Give back parts the product used (taken out of a prototype)."""
+    return _parts("return", product, article, qty, unit, note)
 
 
 # ------------------------------------------------------------- history ----

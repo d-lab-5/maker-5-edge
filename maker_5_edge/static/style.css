@@ -355,3 +355,11 @@ body.side-hidden .layout > .work, body.side-hidden .layout > #edge-connections {
 @media (max-width: 640px) { .intake__item { grid-template-columns: 44px 1fr; } .intake__item .intake-open { grid-column: 1 / -1; } }
 .intake__bar a.button { padding: 4px 10px; border: 1px solid var(--edge); border-radius: 6px; color: var(--ink); text-decoration: none; }
 .intake__bar a.button:hover { border-color: var(--accent); }
+
+/* orders (ADR-0023): the e-mail's preview, and what is expected */
+.intake__h { font-size: 1rem; margin: 1.2rem 0 .3rem; }
+.order-drop { border: 1px dashed var(--line, #999); padding: .6rem; border-radius: 6px; display: block; }
+.order-lines { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.order-lines th, .order-lines td { text-align: left; padding: .25rem .35rem; border-bottom: 1px solid var(--line, #ddd); vertical-align: top; }
+.order-lines tr.is-known { opacity: .55; }
+.order-qty { width: 5.5em; }

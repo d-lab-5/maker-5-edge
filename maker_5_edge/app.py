@@ -38,6 +38,7 @@ from . import git_repo
 from . import inbox as ib
 from . import materials as mt
 from . import migrate as mg
+from . import orders as od
 from . import parts
 from . import products as pr
 from . import wokwi
@@ -637,6 +638,36 @@ def intake_drop(item: str):
     if _by_agent():
         return jsonify({"errors": ["an item is dropped by a person, on the page"]}), 403
     return run(mt.drop, item)
+
+
+# ---- orders: an order e-mail into expected parts (ADR-0023)
+
+def _order_raw() -> bytes:
+    f = request.files.get("file")
+    if f is not None:
+        data = f.read(od.MAX_BYTES + 1)
+    else:
+        data = str(body().get("text") or "").encode("utf-8")
+    if len(data) > od.MAX_BYTES:
+        raise od.OrderError("that e-mail is larger than 2 MB")
+    return data
+
+
+@app.post("/api/orders/preview")
+def orders_preview():
+    """What an order e-mail (a .eml file, or its pasted text) would add as expected. Writes nothing; the e-mail is not kept."""
+    return run(lambda: od.preview(_order_raw()))
+
+
+@app.post("/api/orders/apply")
+def orders_apply():
+    """The lines of a reviewed preview the person ticked, as expected in the cloud."""
+    return run(od.apply, body().get("preview") or {})
+
+
+@app.get("/api/orders")
+def orders_open():
+    return run(od.open_lines)
 
 
 @app.get("/api/products/<p>/bom")

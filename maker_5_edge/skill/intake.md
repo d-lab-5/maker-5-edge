@@ -36,6 +36,17 @@ The label's **family** says which inventory it belongs to: `m5` for maker
 parts, `dhc` for devices a smart home can use (PCs, power supplies, routers,
 hubs). Keep it; a `dhc` item is almost always a device.
 
+## 2b. Was it ordered
+
+`orders_open()` lists what was ordered and is expected (ADR-0023): lines
+the person imported from an order e-mail, with their title, the shop's
+article number, the quantity and the article they are (or a new one they
+describe). Before anything else, look for the item's line: the title on the
+bag or box, the photo, the count. When one fits, set `orderLineId`; the line
+brings its article, what it is and the quantity, so give only what differs
+(a different count in the bag, a box name). One line can arrive in several
+items. Never set a line that does not fit just because it is the only one.
+
 ## 3. Reuse before you make
 
 `stock(words)` with the maker and model first, then with the name. When an

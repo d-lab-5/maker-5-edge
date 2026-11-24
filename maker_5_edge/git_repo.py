@@ -219,9 +219,22 @@ def link(products: Any, p: str, existing: str = "", visibility: str = "", profil
         git(d, "config", "--local", "credential.https://github.com.helper", "")
         git(d, "config", "--local", "--add", "credential.https://github.com.helper", f"!{shutil.which('gh')} auth git-credential")
     _scaffold(d, title)
+    imported = None
+    if existing:
+        # An existing repository holds its design: an empty workspace takes it
+        # from there first, else prepare() would write the empty model over it.
+        from . import migrate
+        there = migrate.sources(products, p)
+        if there["empty"] and (there.get("repo") or {}).get("blocks"):
+            imported = migrate.copy(products, p, {"repo": True})
     prepare(products, p)
-    return status(products, p)
+    out = status(products, p)
+    if imported:
+        out["imported"] = imported
+    return out
 
+
+OLD_SITE_LINK = "[Maker-5](https://maker-5.cloud)"
 
 GITIGNORE = """# never published (ADR-0017)
 cloud.json
@@ -239,10 +252,13 @@ def _scaffold(d: Path, title: str) -> None:
     if not keep.exists():
         keep.write_text(f"# {title}: software\n\nThe code of {title}: what runs on its boards, and around them.\n",
                         encoding="utf-8")
+    readme = d / "README.md"
+    if readme.exists() and OLD_SITE_LINK in readme.read_text(encoding="utf-8"):     # the site's old address
+        readme.write_text(readme.read_text(encoding="utf-8").replace(OLD_SITE_LINK, "[Maker-5](https://maker5.cloud)"), encoding="utf-8")
     if not (d / "README.md").exists() or (d / "README.md").read_text(encoding="utf-8").strip().startswith(f"# {d.name}"):
         (d / "README.md").write_text(f"""# {title}
 
-Designed with [Maker-5](https://maker-5.cloud): open hardware and software.
+Designed with [Maker-5](https://maker5.cloud): open hardware and software.
 
 - `software/`: the code.
 - `hardware/`: the design, written by the Maker-5 edge from its model, so

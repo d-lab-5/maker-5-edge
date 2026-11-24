@@ -398,7 +398,19 @@
   "in.done.moved": "Moved into {place}.",
   "in.adminonly": "Checking in needs an admin of the organisation with two-step sign-in: the person who linked this edge.",
   "in.phone": "Scan on the phone",
-  "help.in.phone": "Opens Scan on the cloud's site: it shows a QR that takes your phone there, with your e-mail filled in."
+  "help.in.phone": "Opens Scan on the cloud's site: it shows a QR that takes your phone there, with your e-mail filled in.",
+  "mg.button": "Copy a model in",
+  "help.mg": "Fill this empty workspace from another connection's (stage to prod) or from its GitHub repository. A dry run comes first.",
+  "mg.what": "The open model comes along: blocks, modules, interfaces, pins, wires and pictures. The cloud's own stays where it is: stock links and quantities, proposals and decisions, and the history.",
+  "mg.from": "{title} in {profile}: {b} blocks, {m} modules",
+  "mg.fromRepo": "The linked repository's hardware/model.ttl: {b} blocks",
+  "mg.nothing": "Nothing to copy from: no other connection has a filled workspace here, and no repository is linked.",
+  "mg.preview": "What the copy brings",
+  "mg.brings": "{b} blocks, {m} modules, {i} interfaces, {p} pins and {w} wires.",
+  "mg.stays": "Stock links come again when you link the parts to this cloud's stock.",
+  "mg.copy": "Copy it in",
+  "mg.done": "Copied in: {b} blocks, {m} modules.",
+  "mg.syncLater": "The cloud takes it at the next sync."
  },
  "de": {
   "core.theme": "Design",
@@ -799,7 +811,19 @@
   "in.done.moved": "Nach {place} gelegt.",
   "in.adminonly": "Einbuchen braucht einen Admin der Organisation mit Zwei-Schritt-Anmeldung: die Person, die diese Edge verbunden hat.",
   "in.phone": "Mit dem Telefon scannen",
-  "help.in.phone": "Öffnet Scannen auf der Seite der Cloud: dort ist ein QR-Code, der dein Telefon hinbringt, mit deiner E-Mail eingetragen."
+  "help.in.phone": "Öffnet Scannen auf der Seite der Cloud: dort ist ein QR-Code, der dein Telefon hinbringt, mit deiner E-Mail eingetragen.",
+  "mg.button": "Modell hineinkopieren",
+  "help.mg": "Diesen leeren Arbeitsbereich aus dem einer anderen Verbindung (Stage nach Prod) oder aus seinem GitHub-Repository füllen. Zuerst kommt ein Probelauf.",
+  "mg.what": "Das offene Modell kommt mit: Blöcke, Module, Schnittstellen, Pins, Drähte und Bilder. Was der Cloud gehört, bleibt, wo es ist: Lagerverknüpfungen und Mengen, Vorschläge und Entscheidungen, und die Geschichte.",
+  "mg.from": "{title} in {profile}: {b} Blöcke, {m} Module",
+  "mg.fromRepo": "hardware/model.ttl des verknüpften Repositorys: {b} Blöcke",
+  "mg.nothing": "Nichts zum Kopieren: keine andere Verbindung hat hier einen gefüllten Arbeitsbereich, und kein Repository ist verknüpft.",
+  "mg.preview": "Was die Kopie bringt",
+  "mg.brings": "{b} Blöcke, {m} Module, {i} Schnittstellen, {p} Pins und {w} Drähte.",
+  "mg.stays": "Lagerverknüpfungen entstehen neu, wenn Sie die Teile mit dem Lager dieser Cloud verknüpfen.",
+  "mg.copy": "Hineinkopieren",
+  "mg.done": "Hineinkopiert: {b} Blöcke, {m} Module.",
+  "mg.syncLater": "Die Cloud übernimmt es beim nächsten Abgleich."
  },
  "fr": {
   "core.theme": "thème",
@@ -1200,7 +1224,19 @@
   "in.done.moved": "Rangé dans {place}.",
   "in.adminonly": "L'enregistrement demande un admin de l'organisation avec la connexion en deux étapes : la personne qui a lié cet edge.",
   "in.phone": "Scanner avec le téléphone",
-  "help.in.phone": "Ouvre Scanner sur le site du cloud : un code QR y emmène votre téléphone, votre e-mail déjà saisi."
+  "help.in.phone": "Ouvre Scanner sur le site du cloud : un code QR y emmène votre téléphone, votre e-mail déjà saisi.",
+  "mg.button": "Copier un modèle",
+  "help.mg": "Remplir cet espace de travail vide depuis celui d’une autre connexion (de stage vers prod) ou depuis son dépôt GitHub. Un essai à blanc vient d’abord.",
+  "mg.what": "Le modèle ouvert vient avec : blocs, modules, interfaces, broches, fils et images. Ce qui est au cloud reste où il est : liens au stock et quantités, propositions et décisions, et l’historique.",
+  "mg.from": "{title} dans {profile} : {b} blocs, {m} modules",
+  "mg.fromRepo": "hardware/model.ttl du dépôt relié : {b} blocs",
+  "mg.nothing": "Rien à copier : aucune autre connexion n’a ici d’espace rempli, et aucun dépôt n’est relié.",
+  "mg.preview": "Ce que la copie apporte",
+  "mg.brings": "{b} blocs, {m} modules, {i} interfaces, {p} broches et {w} fils.",
+  "mg.stays": "Les liens au stock reviennent quand vous reliez les pièces au stock de ce cloud.",
+  "mg.copy": "Copier",
+  "mg.done": "Copié : {b} blocs, {m} modules.",
+  "mg.syncLater": "Le cloud le reprend à la prochaine synchronisation."
  },
  "edge": {
   "de": {

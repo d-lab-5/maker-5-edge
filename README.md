@@ -7,7 +7,7 @@ repos, CAD/PCB artifacts and hardware telemetry with the cloud.
 
 It runs on your workstation or lab bench and pairs securely with the Maker-5
 cloud ([maker-5-cloud](https://github.com/d-lab-5/maker-5-cloud), at
-maker-5.cloud) using the device flow: the edge shows a code, and an admin of
+maker5.cloud) using the device flow: the edge shows a code, and an admin of
 your workspace approves it. It then watches local Git repositories, CAD/PCB
 schematics, firmware builds and connected test hardware, and syncs what it
 learns with the cloud's semantic graph in both directions. The page and the
@@ -93,6 +93,13 @@ refuses tokens, keys and e-mail addresses. Stock, places, prices, people and
 chats stay in the cloud, which keeps only the link. The chat finds free and
 idle parts with `catalogue()` and `free_parts()` before it proposes buying
 any (ADR-0018, ADR-0019).
+
+**Copy a model in** fills an empty workspace once: from the same workspace
+in your other connection (stage into a new prod workspace), or from its
+GitHub repository's `hardware/model.ttl`. It shows a dry run first and
+brings only the open model; stock links, proposals and the history stay with
+their cloud (ADR-0013). Linking an existing repository to an empty
+workspace does the same by itself.
 
 If someone changes `hardware/model.ttl` on GitHub, **Pull** notices and the
 Code tab offers to bring those statements into the model, or to keep the

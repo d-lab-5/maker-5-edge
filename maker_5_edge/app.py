@@ -37,6 +37,7 @@ from . import drawing
 from . import git_repo
 from . import inbox as ib
 from . import materials as mt
+from . import migrate as mg
 from . import parts
 from . import products as pr
 from . import wokwi
@@ -169,7 +170,7 @@ def run(fn, *args, **kwargs):
         return jsonify({"errors": [str(e.payload.get("message") or e) if e.payload else str(e)]}), 422 if e.status == 422 else 502
     except fz.FritzingError as e:
         return jsonify({"errors": [str(e)]}), 502
-    except (git_repo.RepoError, dp.DeployError) as e:
+    except (git_repo.RepoError, dp.DeployError, mg.MigrateError) as e:
         return jsonify({"errors": [str(e)]}), 409
     except (ValueError, TypeError) as e:
         return jsonify({"errors": [str(e)]}), 400
@@ -322,6 +323,23 @@ def canvas_notes(p: str):
 def canvas_pins(p: str):
     b = body()
     return run(products().set_pins, p, str(b.get("block") or ""), b.get("pins") or [])
+
+
+# ---- a workspace's model from stage or its repository (migrate.py; ADR-0013, amended)
+
+@app.get("/api/products/<p>/migrate")
+def migrate_sources(p):
+    return run(mg.sources, products(), p)
+
+
+@app.post("/api/products/<p>/migrate")
+def migrate_copy(p):
+    """A dry run unless {"dry_run": false}; {"from": {"profile", "product"} | {"repo": true}}."""
+    b = body()
+    src = b.get("from") if isinstance(b.get("from"), dict) else {}
+    if b.get("dry_run", True) is not False:
+        return run(mg.plan, products(), p, src)
+    return run(mg.copy, products(), p, src)
 
 
 # ---- the workspace's repository on GitHub (git_repo.py; ADR-0017)

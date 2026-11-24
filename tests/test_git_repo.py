@@ -250,3 +250,22 @@ def test_pictures_go_to_hardware_images_and_are_credited(ws):
     notice = (d / "NOTICE").read_text()
     assert "Wokwi elements" in notice and "LED (led)" in notice and "MIT" in notice
     assert (d / "hardware" / "images" / f"{led}.svg").exists()
+
+
+def test_linking_an_existing_repository_brings_its_design_into_an_empty_workspace(ws):
+    gr.link(ws["P"], ws["p"])
+    gr.push(ws["P"], ws["p"], "First design")
+    fresh = ws["P"].new_product("Door bell again")["product"]
+    st = gr.link(ws["P"], fresh, "maker-5-platform/door-bell")
+    assert st["imported"]["brings"]["blocks"] == 2 and st["imported"]["brings"]["wires"] == 1
+    model = ws["P"].model(fresh)
+    assert sorted(b["name"] for b in model["blocks"]) == ["Example board", "Example opto"]
+    assert not any(b["article"] for b in model["blocks"]), "stock links never travel"
+    published = (gr.repo_dir(ws["P"], fresh) / "hardware" / "model.ttl").read_text()
+    assert "Example opto" in published, "the repository's design is not written over with an empty model"
+
+
+def test_a_readme_names_the_site_at_its_address(ws):
+    gr.link(ws["P"], ws["p"])
+    readme = (gr.repo_dir(ws["P"], ws["p"]) / "README.md").read_text()
+    assert "https://maker5.cloud" in readme and "maker-5.cloud" not in readme

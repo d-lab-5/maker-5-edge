@@ -167,6 +167,7 @@ async function drawModel() {
     <div class="ws-head"><h2>${esc(m.product.title)}</h2>
       ${S.fromCloud ? "" : `<button class="ws-rename" data-help="help.renameProduct">${esc(t("model.renameProduct"))}</button>`}
       <button class="ws-bom" data-help="help.bom">${esc(t("bom.import"))}</button>
+      ${m.blocks.length + m.modules.length + m.interfaces.length ? "" : `<button class="ws-migrate" data-help="help.mg">${esc(t("mg.button"))}</button>`}
       <a class="btn" download href="${P()}/export.ttl" data-help="help.export">${esc(t("model.export"))}</a></div>
     <p class="sub">${esc(t("model.sub", { n: m.triples }))}</p>
     <div class="cols">
@@ -183,6 +184,7 @@ async function drawModel() {
     </div>
     ${drawParts()}`;
   box.querySelector(".ws-bom").onclick = () => bomDialog();
+  if (box.querySelector(".ws-migrate")) box.querySelector(".ws-migrate").onclick = () => migrateDialog();
   if (box.querySelector(".ws-rename")) box.querySelector(".ws-rename").onclick = (e) => renameForm(e.target.closest(".ws-head"), m.product.title);
   box.querySelectorAll("button.add").forEach((b) => b.onclick = () => { S.adding = b.dataset.add; S.seen.model = null; drawModel(); });
   box.querySelectorAll("form.add-form").forEach((f) => {
@@ -253,6 +255,57 @@ function bomDialog() {
       try {
         const pv = await busy(() => core.api("POST", `${P()}/import/bom`, { text }));
         bomPreview(pv);
+      } catch (err) { core.toast(failed(err), true); }
+    };
+  });
+}
+
+// ------------------------------------------------------------ migrate ----
+// An empty workspace filled from another connection's (stage → prod) or from
+// its repository: a dry run first, then the copy (migrate.py).
+
+async function migrateDialog() {
+  let src;
+  try { src = await core.api("GET", `${P()}/migrate`); } catch (err) { core.toast(failed(err), true); return; }
+  const opts = [...src.connections.map((c) => ({ v: JSON.stringify({ profile: c.profile, product: c.product }),
+    label: t("mg.from", { title: c.title, profile: c.profile, b: c.blocks, m: c.modules }) })),
+    ...(src.repo ? [{ v: JSON.stringify({ repo: true }), label: t("mg.fromRepo", { b: src.repo.blocks }) }] : [])];
+  if (!opts.length) { core.toast(t("mg.nothing"), true); return; }
+  core.dialog(t("mg.button"), `<p class="note">${esc(t("mg.what"))}</p>
+    <fieldset class="mg-src">${opts.map((o, i) => `<label><input type="radio" name="src" value="${esc(o.v)}" ${i ? "" : "checked"}> ${esc(o.label)}</label>`).join("")}</fieldset>
+    <div class="actions"><button value="cancel" formnovalidate>${esc(t("model.cancel"))}</button>
+      <button value="ok" class="primary">${esc(t("mg.preview"))}</button></div>`, (form, dlg) => {
+    form.onsubmit = async (ev) => {
+      form.onsubmit = null;
+      if (!ev.submitter || ev.submitter.value !== "ok") return;
+      ev.preventDefault();
+      const from = JSON.parse(form.querySelector('[name="src"]:checked').value);
+      dlg.close();
+      let pv;
+      try { pv = await busy(() => core.api("POST", `${P()}/migrate`, { from })); } catch (err) { core.toast(failed(err), true); return; }
+      migratePreview(from, pv);
+    };
+  });
+}
+
+function migratePreview(from, pv) {
+  const b = pv.brings;
+  core.dialog(t("mg.preview"), `
+    <p>${esc(t("mg.brings", { b: b.blocks, m: b.modules, i: b.interfaces, p: b.pins, w: b.wires }))}</p>
+    <p class="note">${esc(t("mg.stays"))}</p>
+    ${pv.refused ? `<p class="note warn">${esc(pv.refused)}</p>` : ""}
+    <div class="actions"><button value="cancel" formnovalidate>${esc(t("model.cancel"))}</button>
+      <button value="ok" class="primary" ${pv.refused ? "disabled" : ""}>${esc(t("mg.copy"))}</button></div>`, (form, dlg) => {
+    form.onsubmit = async (ev) => {
+      form.onsubmit = null;
+      if (!ev.submitter || ev.submitter.value !== "ok") return;
+      ev.preventDefault();
+      dlg.close();
+      try {
+        const r = await busy(() => core.api("POST", `${P()}/migrate`, { from, dry_run: false }));
+        core.toast(t("mg.done", { b: r.brings.blocks, m: r.brings.modules }) + (r.sync && r.sync !== "ok" ? ` ${t("mg.syncLater")}` : ""));
+        S.seen = {};
+        refresh();
       } catch (err) { core.toast(failed(err), true); }
     };
   });

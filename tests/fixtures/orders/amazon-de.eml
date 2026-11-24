@@ -1,0 +1,31 @@
+From: "Amazon.de" <auto-confirm@amazon.de>
+To: someone@example.org
+Subject: =?UTF-8?Q?Ihre_Amazon.de_Bestellung_von_=E2=80=9EEXAMPLEBRAND_100_St=C3=BCck=E2=80=9C?=
+Date: Fri, 20 Nov 2026 09:15:00 +0100
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="b1"
+
+--b1
+Content-Type: text/plain; charset=utf-8
+
+Bestellung 000-0000000-0000001 (plain part, the HTML is read first)
+
+--b1
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: 8bit
+
+<html><head><style>.x{color:red}</style><title>Bestellung</title></head><body>
+<p>Hallo Erika Example,</p>
+<p>Bestellnummer: <a href="https://www.amazon.de/gp/r.html?U=https%3A%2F%2Fwww.amazon.de%2Fgp%2Fcss%2Forder-details%3ForderID%3D000-0000000-0000001">#000-0000000-0000001</a></p>
+<table>
+<tr><td><a href="https://www.amazon.de/gp/r.html?C=X&amp;U=https%3A%2F%2Fwww.amazon.de%2Fdp%2FB0EXAMPLE1%3Fref_%3Dpe"><img src="https://m.media-amazon.example.org/a.jpg" alt=""></a></td>
+<td><a href="https://www.amazon.de/gp/r.html?C=X&amp;U=https%3A%2F%2Fwww.amazon.de%2Fdp%2FB0EXAMPLE1%3Fref_%3Dpe">EXAMPLEBRAND 100 Stück Micro Taster 6x6x5mm Drucktaster</a><br>
+Menge: 2<br>9,99 €</td></tr>
+<tr><td><a href="https://www.amazon.de/dp/B0EXAMPLE2">Raspberry Pi 5 Example Board 8 GB</a><br>Menge: 1<br>EUR 89,90</td></tr>
+</table>
+<p>Lieferadresse: Erika Example, Beispielweg 1, 12345 Example City</p>
+<p>Zahlungsart: Visa endet auf 0000</p>
+<h3>Kunden, die diesen Artikel gekauft haben, kauften auch</h3>
+<a href="https://www.amazon.de/dp/B0EXAMPLE9">Example recommended soldering wire</a> 4,99 €
+</body></html>
+--b1--

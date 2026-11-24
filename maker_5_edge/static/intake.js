@@ -7,6 +7,11 @@
  * edge refuses them from one. The cloud checks in only for an admin of the
  * organisation with two-step sign-in: the person who linked this edge.
  *
+ * Orders (ADR-0023): an order e-mail dropped here (or its text pasted)
+ * becomes expected lines in the cloud, after a preview the person ticks.
+ * The e-mail is read here and not kept; only the order number, its date and
+ * the lines leave. An item that arrived for a line names it (From order).
+ *
  *   window.intakeView.draw()   the tab
  */
 (() => {
@@ -14,7 +19,7 @@
   const esc = (s) => core.esc(String(s ?? ""));
   const t = (k, v) => window.i18n.t(k, v);
   const failed = (err) => (err && err.errors) ? err.errors.join("; ") : t("failed");
-  const V = { key: "", cats: null, site: null };
+  const V = { key: "", cats: null, site: null, lines: [] };
   /** The cloud's site, where Scan shows a QR for the phone. Only https. */
   async function site() {
     if (V.site === null) {
@@ -35,7 +40,8 @@
     try { items = await core.api("GET", "/api/intake"); } catch (err) {
       box.innerHTML = `<p class="note">${esc(failed(err))}</p>`; V.key = ""; return;
     }
-    const key = JSON.stringify(items);
+    try { V.lines = await core.api("GET", "/api/orders"); } catch { V.lines = []; }
+    const key = JSON.stringify([items, V.lines]);
     if (!force && key === V.key && box.querySelector(".intake")) return;
     V.key = key;
     const described = items.filter((x) => x.status === "described").length;
@@ -46,6 +52,7 @@
         <button type="button" class="intake-ask" ${items.some((x) => x.status === "new" && !x.known) ? "" : "disabled"}
           data-help="help.in.ask">${esc(t("in.ask"))}</button>
         <button type="button" class="intake-reload">${esc(t("in.reload"))}</button>
+        <button type="button" class="intake-order" data-help="help.or.mail">${esc(t("or.mail"))}</button>
         ${scan ? `<a class="button" href="${esc(scan)}/scan/?mode=intake" target="_blank" rel="noopener"
           data-help="help.in.phone">${esc(t("in.phone"))}</a>` : ""}
       </div>
@@ -60,9 +67,15 @@
             <small>${esc(x.placeName || "")}${x.note ? ` · ${esc(x.note)}` : ""}${x.qty ? ` · ${x.qty}` : ""}</small></span>
           <button type="button" class="intake-open">${esc(t("in.open"))}</button></li>`;
       }).join("")}</ul>` : `<p class="note">${esc(t("in.empty"))}</p>`}
+      ${V.lines.length ? `<h3 class="intake__h">${esc(t("or.expected"))}</h3>
+      <ul class="intake__list intake__expected">${V.lines.map((l) => `<li data-line="${esc(l.id)}">
+        <span class="intake__text"><b>${esc(l.title)}</b>
+          <small>${l.arrived ? `${l.arrived}/${l.qty}` : `× ${l.qty}`} · ${esc(l.orderedAt || "")} · ${esc(l.supplier)} · ${esc(l.articleName || t("or.new"))}</small></span>
+      </li>`).join("")}</ul>` : ""}
     </div>`;
     box.querySelector(".intake-reload").onclick = () => draw(true);
     box.querySelector(".intake-ask").onclick = () => ask(t("in.request"));
+    box.querySelector(".intake-order").onclick = orderDialog;
     box.querySelectorAll(".intake-open").forEach((b) => b.onclick = () => open(b.closest("[data-id]").dataset.id));
   }
 
@@ -98,6 +111,10 @@
         : `<p class="note">${esc(t("in.noPhoto"))}</p>`}</div>
       ${x.note || x.qty ? `<p class="note">${esc(t("in.taken"))}: ${esc(x.note || "")}${x.qty ? ` · ${x.qty}` : ""}</p>` : ""}
       ${known ? `<p>${esc(t("in.knownMove", { name: known.name || known.id, place: x.placeName || "" }))}</p>` : `
+      ${V.lines.length ? `<label>${esc(t("or.from"))}<select name="orderLineId">
+        <option value="">${esc(t("or.none"))}</option>
+        ${V.lines.map((l) => `<option value="${esc(l.id)}" ${s.orderLineId === l.id ? "selected" : ""}>${esc(l.title.slice(0, 60))} × ${l.qty - l.arrived}</option>`).join("")}
+      </select></label>` : ""}
       <fieldset class="intake-what">${WHAT.map((w) => `<label><input type="radio" name="what" value="${w}" ${(s.what || (x.family === "dhc" ? "device" : "")) === w ? "checked" : ""}>
         ${esc(t(`in.what.${w}`))}</label>`).join("")}</fieldset>
       <label>${esc(t("in.article"))}${sure("articleId")}
@@ -128,6 +145,26 @@
         q("qty").closest("label").hidden = w === "device";
         q("boxName").closest("label").hidden = w !== "box";
       };
+      if (!known && q("orderLineId")) {
+        q("orderLineId").onchange = () => {
+          const l = V.lines.find((x) => x.id === q("orderLineId").value);
+          if (!l) return;
+          const r = form.querySelector(`[name="what"][value="${l.what}"]`);
+          if (r) r.checked = true;
+          if (l.articleId) {
+            q("articleId").value = l.articleId; q("find").value = l.articleName || l.title;
+            form.querySelector(".intake-new").hidden = true;
+          } else {
+            const a = l.article || {};
+            q("articleId").value = ""; q("find").value = "";
+            form.querySelector(".intake-new").hidden = false;
+            q("name").value = a.name || l.title; if (a.category) q("category").value = a.category;
+            if (a.manufacturer) q("manufacturer").value = a.manufacturer; if (a.mpn) q("mpn").value = a.mpn;
+          }
+          q("qty").value = Math.max(1, l.qty - l.arrived);
+          shown();
+        };
+      }
       if (!known) {
         form.querySelectorAll('[name="what"]').forEach((r) => r.onchange = shown);
         shown();
@@ -156,6 +193,7 @@
         const what = (form.querySelector('[name="what"]:checked') || {}).value;
         const out = { what, sure: s.sure };
         const v = (n) => q(n).value.trim();
+        if (q("orderLineId") && v("orderLineId")) out.orderLineId = v("orderLineId");
         if (v("articleId")) out.articleId = v("articleId");
         else out.article = { name: v("name") || v("find"), category: v("category") || "other", manufacturer: v("manufacturer"), mpn: v("mpn") };
         if (what === "device" && v("serial")) out.serial = v("serial");
@@ -177,6 +215,69 @@
             const r = await core.api("POST", `/api/intake/${encodeURIComponent(id)}/checkin`, sg ? { suggestion: sg } : {});
             core.toast(t(known ? "in.done.moved" : `in.done.${r.kind}`, { place: x.placeName || "" }));
           }
+        } catch (err) { core.toast(failed(err), true); return; }
+        form.onsubmit = null;
+        dlg.close();
+        await draw(true);
+      };
+    });
+  }
+
+  /** An order e-mail: drop or choose the .eml, or paste its text; a preview to tick; then expected. */
+  function orderDialog() {
+    let pv = null;
+    core.dialog(t("or.mail"), `<div class="intake-form order-form">
+      <p class="note">${esc(t("or.mailLead"))}</p>
+      <label class="order-drop">${esc(t("or.file"))}<input type="file" name="file" accept=".eml,message/rfc822,.txt"></label>
+      <label>${esc(t("or.paste"))}<textarea name="text" rows="5"></textarea></label>
+      <div class="order-preview"></div>
+      <div class="actions"><button value="cancel" formnovalidate>${esc(t("model.cancel"))}</button>
+        <button value="read" formnovalidate>${esc(t("or.read"))}</button>
+        <button value="apply" class="primary" disabled>${esc(t("or.apply"))}</button></div></div>`, (form, dlg) => {
+      const zone = form.querySelector(".order-form");
+      zone.ondragover = (e) => { e.preventDefault(); };
+      zone.ondrop = (e) => {
+        e.preventDefault();
+        const f = e.dataTransfer && e.dataTransfer.files[0];
+        if (f) { const dt = new DataTransfer(); dt.items.add(f); form.querySelector('[name="file"]').files = dt.files; read(); }
+      };
+      form.querySelector('[name="file"]').onchange = () => read();
+      const show = () => {
+        const box = form.querySelector(".order-preview");
+        box.innerHTML = `<p><b>${esc(pv.supplier)} · ${esc(pv.orderRef)}</b> ${esc(pv.orderedAt || "")}</p>
+          <table class="order-lines"><thead><tr><th></th><th>${esc(t("or.title"))}</th><th>${esc(t("in.qty"))}</th>
+            <th>${esc(t("or.is"))}</th><th>${esc(t("in.category"))}</th></tr></thead><tbody>
+          ${pv.lines.map((l, i) => `<tr class="${l.known ? "is-known" : ""}"><td><input type="checkbox" data-i="${i}" ${l.include ? "checked" : ""}></td>
+            <td>${esc(l.title)}${l.unitPrice != null ? ` <small>${esc(l.unitPrice)} ${esc(l.currency || "")}</small>` : ""}</td>
+            <td><input type="number" min="1" data-q="${i}" value="${l.qty}" class="order-qty">${l.pack > 1 ? ` <small>${esc(t("or.pack", { n: l.ordered, each: l.pack }))}</small>` : ""}</td>
+            <td>${l.known ? esc(t("or.known")) : l.match ? `${esc(l.match.name)} <small>${esc(t(`or.by.${l.match.by}`))}</small>` : esc(t("or.new"))}</td>
+            <td>${l.match ? "" : esc(l.article.category)}</td></tr>`).join("")}</tbody></table>`;
+        box.querySelectorAll("[data-i]").forEach((c) => c.onchange = () => { pv.lines[+c.dataset.i].include = c.checked; });
+        box.querySelectorAll("[data-q]").forEach((c) => c.onchange = () => { pv.lines[+c.dataset.q].qty = Math.max(1, +c.value || 1); });
+        form.querySelector('[value="apply"]').disabled = false;
+      };
+      async function read() {
+        const f = form.querySelector('[name="file"]').files[0];
+        const text = form.querySelector('[name="text"]').value;
+        let r;
+        try {
+          if (f) {
+            const fd = new FormData(); fd.append("file", f);
+            const res = await fetch("/api/orders/preview", { method: "POST", body: fd });
+            r = await res.json().catch(() => ({}));
+            if (!res.ok) throw r;
+          } else r = await core.api("POST", "/api/orders/preview", { text });
+        } catch (err) { core.toast(failed(err), true); return; }
+        pv = r; show();
+      }
+      form.onsubmit = async (ev) => {
+        const b = ev.submitter && ev.submitter.value;
+        if (!b || b === "cancel") { form.onsubmit = null; return; }
+        ev.preventDefault();
+        if (b === "read") { await read(); return; }
+        try {
+          const r = await core.api("POST", "/api/orders/apply", { preview: pv });
+          core.toast(t("or.added", { n: r.added, skipped: r.skipped }));
         } catch (err) { core.toast(failed(err), true); return; }
         form.onsubmit = null;
         dlg.close();

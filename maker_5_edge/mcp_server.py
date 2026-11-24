@@ -385,8 +385,21 @@ def intake_describe(item: str, suggestion: Dict[str, Any]) -> dict:
     existing article, from stock()) or article {name, category ("top/sub"
     from catalogue()), manufacturer, mpn, unit, note, datasheet}, serial,
     qty, boxName, boxKind (box, bag, folder, drawer), sure {field: high |
-    medium | low}, note}. Read intake_skill() first."""
+    medium | low}, note, orderLineId (the expected order line it arrived
+    for, from orders_open(): its article and quantity fill in what you
+    leave out)}. Read intake_skill() first."""
     return web.call("POST", f"/api/intake/{_q(item)}/describe", {"suggestion": suggestion})
+
+
+@server.tool()
+def orders_open() -> list:
+    """What was ordered and is expected (ADR-0023): each line's id, title,
+    the shop's article number (sku), quantity and how many arrived, what it
+    is (device or bulk), the stock's article it is (articleId, articleName)
+    or the new article it describes, and when it was ordered. An item of the
+    intake that matches a line gets its id as orderLineId. Importing an order
+    e-mail is the person's, on the Intake tab."""
+    return _get("/api/orders")
 
 
 @server.tool()

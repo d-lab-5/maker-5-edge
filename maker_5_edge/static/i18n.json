@@ -396,7 +396,9 @@
   "in.done.box": "Checked in: a new box in {place}.",
   "in.done.article": "Checked in: counted into {place}.",
   "in.done.moved": "Moved into {place}.",
-  "in.adminonly": "Checking in needs an admin of the organisation with two-step sign-in: the person who linked this edge."
+  "in.adminonly": "Checking in needs an admin of the organisation with two-step sign-in: the person who linked this edge.",
+  "in.phone": "Scan on the phone",
+  "help.in.phone": "Opens Scan on the cloud's site: it shows a QR that takes your phone there, with your e-mail filled in."
  },
  "de": {
   "core.theme": "Design",
@@ -795,7 +797,9 @@
   "in.done.box": "Eingebucht: eine neue Kiste in {place}.",
   "in.done.article": "Eingebucht: in {place} gezählt.",
   "in.done.moved": "Nach {place} gelegt.",
-  "in.adminonly": "Einbuchen braucht einen Admin der Organisation mit Zwei-Schritt-Anmeldung: die Person, die diese Edge verbunden hat."
+  "in.adminonly": "Einbuchen braucht einen Admin der Organisation mit Zwei-Schritt-Anmeldung: die Person, die diese Edge verbunden hat.",
+  "in.phone": "Mit dem Telefon scannen",
+  "help.in.phone": "Öffnet Scannen auf der Seite der Cloud: dort ist ein QR-Code, der dein Telefon hinbringt, mit deiner E-Mail eingetragen."
  },
  "fr": {
   "core.theme": "thème",
@@ -1194,7 +1198,9 @@
   "in.done.box": "Enregistré : une nouvelle boîte dans {place}.",
   "in.done.article": "Enregistré : compté dans {place}.",
   "in.done.moved": "Rangé dans {place}.",
-  "in.adminonly": "L'enregistrement demande un admin de l'organisation avec la connexion en deux étapes : la personne qui a lié cet edge."
+  "in.adminonly": "L'enregistrement demande un admin de l'organisation avec la connexion en deux étapes : la personne qui a lié cet edge.",
+  "in.phone": "Scanner avec le téléphone",
+  "help.in.phone": "Ouvre Scanner sur le site du cloud : un code QR y emmène votre téléphone, votre e-mail déjà saisi."
  },
  "edge": {
   "de": {

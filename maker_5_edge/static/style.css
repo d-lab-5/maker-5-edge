@@ -353,3 +353,5 @@ body.side-hidden .layout > .work, body.side-hidden .layout > #edge-connections {
 .intake-found small, .intake-form small { color: var(--muted); }
 .intake-form .sure-low { color: #b45309; }
 @media (max-width: 640px) { .intake__item { grid-template-columns: 44px 1fr; } .intake__item .intake-open { grid-column: 1 / -1; } }
+.intake__bar a.button { padding: 4px 10px; border: 1px solid var(--edge); border-radius: 6px; color: var(--ink); text-decoration: none; }
+.intake__bar a.button:hover { border-color: var(--accent); }

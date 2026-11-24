@@ -14,7 +14,15 @@
   const esc = (s) => core.esc(String(s ?? ""));
   const t = (k, v) => window.i18n.t(k, v);
   const failed = (err) => (err && err.errors) ? err.errors.join("; ") : t("failed");
-  const V = { key: "", cats: null };
+  const V = { key: "", cats: null, site: null };
+  /** The cloud's site, where Scan shows a QR for the phone. Only https. */
+  async function site() {
+    if (V.site === null) {
+      try { const s = (await core.api("GET", "/api/cloud")).site || ""; V.site = /^https:\/\/[^/]+/.test(s) ? s.replace(/\/+$/, "") : ""; }
+      catch { V.site = ""; }
+    }
+    return V.site;
+  }
   const mark = (x) => (x.code.kind === "m5" ? `${x.family === "dhc" ? "DHC" : "M5"} ${x.code.value}` : x.code.value);
   const photoUrl = (x, p) => `/api/intake/${encodeURIComponent(x.id)}/photos/${encodeURIComponent(p.id)}.jpg`;
   const WHAT = ["device", "box", "bulk"];
@@ -31,12 +39,15 @@
     if (!force && key === V.key && box.querySelector(".intake")) return;
     V.key = key;
     const described = items.filter((x) => x.status === "described").length;
+    const scan = await site();
     box.innerHTML = `<div class="intake">
       <div class="intake__bar">
         <span>${esc(t("in.count", { n: items.length, d: described }))}</span>
         <button type="button" class="intake-ask" ${items.some((x) => x.status === "new" && !x.known) ? "" : "disabled"}
           data-help="help.in.ask">${esc(t("in.ask"))}</button>
         <button type="button" class="intake-reload">${esc(t("in.reload"))}</button>
+        ${scan ? `<a class="button" href="${esc(scan)}/scan/?mode=intake" target="_blank" rel="noopener"
+          data-help="help.in.phone">${esc(t("in.phone"))}</a>` : ""}
       </div>
       ${items.length ? `<ul class="intake__list">${items.map((x) => {
         const s = x.suggestion;

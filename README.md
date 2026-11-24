@@ -123,6 +123,17 @@ the organisation with two-step sign-in. Admins can also check in on the
 phone, under Materials → Intake. The agent cannot
 check in or drop an item; the edge refuses both from it.
 
+**Order e-mail** on the Intake tab reads an order confirmation (ADR-0023;
+Amazon's for now): save it from your mail program as `.eml` and drop it
+there, or paste its text. A preview lists the lines, matched to the stock
+(by the shop's article number, then by name) or drafted as new articles,
+with a pack such as "100 Stück" counted in pieces. You tick what to keep and
+**Add as expected**. Only the order number, its date and the lines leave the
+edge; the address and the payment are never read out, and the e-mail is not
+kept. When the parcel comes, scan it at the shelf as usual and pick its line
+under **From order** (the agent does, with `orders_open()`); checking it in
+books the stock and counts the line as arrived.
+
 Your work lives in `mymaker5docs/`, which git ignores and which follows the
 working directory: a folder per cloud, `mymaker5docs/prod/` and
 `mymaker5docs/stage/`, each synced with its own cloud alone (ADR-0013 in

@@ -41,7 +41,10 @@ SUPPLY_WORDS = (("to-buy", ("to buy", "to build", "buy", "order")),
 # a part's name, by its words, to an article category (ADR-0019: "top/sub",
 # the ontology's m5:ArticleCategories). The first match wins, so the more
 # particular words come first: a sound card is audio, not storage.
-CATEGORY_WORDS = (("tools/measuring", ("multimeter", "oscilloscope", "logic analyser", "logic analyzer")),
+CATEGORY_WORDS = (("robots/arms", ("robot arm", "robotic arm")),
+                  ("robots/educational", ("thymio", "cozmo", "mbot", "mindstorms", "ozobot", "sphero", "bee-bot")),
+                  ("robots/mobile", ("robot", "rover")),
+                  ("tools/measuring", ("multimeter", "oscilloscope", "logic analyser", "logic analyzer")),
                   ("tools/soldering", ("soldering iron", "soldering station", "hot air")),
                   ("tools/hand", ("tools", "screwdriver", "pliers", "crimp")),
                   ("media/displays", (" tv ", "old tv", "monitor", "display", "lcd", "oled", "e-paper")),
@@ -77,7 +80,8 @@ CATEGORY_WORDS = (("tools/measuring", ("multimeter", "oscilloscope", "logic anal
                   ("consumables/heat-shrink", ("heat shrink",)),
                   ("components/ics", (" ic ", "chip")))
 MECHANICAL = ("chassis", "mechanical")
-SERIAL = ("controllers/sbc", "controllers/mcu", "controllers/phones", "tools/measuring")
+SERIAL = ("controllers/sbc", "controllers/mcu", "controllers/phones", "tools/measuring",
+          "robots", "robots/educational", "robots/mobile", "robots/arms")
 
 
 def _cells(line: str) -> List[str]:

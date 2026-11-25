@@ -392,6 +392,36 @@ def intake_describe(item: str, suggestion: Dict[str, Any]) -> dict:
 
 
 @server.tool()
+def supplier_read(file: str) -> dict:
+    """A supplier's document from inbox() (an e-mail, a PDF) read for the
+    stock (ADR-0024): the shop, its kind (order, shipment, invoice, service,
+    other), number (ref) and date, its attachments, and each line with the
+    stock's article it surely is (match), up to three that look alike
+    (candidates, with a score), a line expected already (known), and a
+    proposed action: expect, link or skip. A shop without a reader gives no
+    lines but its text: read it and write the lines yourself. Writes nothing.
+    Read intake_skill() first, section "Supplier documents"."""
+    return web.call("POST", "/api/suppliers/preview", {"file": file})
+
+
+@server.tool()
+def supplier_apply(preview: Dict[str, Any]) -> dict:
+    """Do what a supplier_read() preview says, as the person reviewed it: its
+    supplier, ref, date and file, and lines each with action expect (a new
+    order line; articleId when it is a known article), link (the stock's
+    articleId: the part is ours already) or skip. Every attachment is
+    uploaded once and put onto the linked articles and the expected lines.
+    In the chat this is a PROPOSAL the person confirms with a click."""
+    lines = [x for x in (preview.get("lines") or []) if isinstance(x, dict)]
+    n = {a: sum(1 for x in lines if x.get("action") == a) for a in ("expect", "link")}
+    what = ", ".join(f"{a} {n[a]}: " + "; ".join(str(x.get("title") or "")[:50] for x in lines if x.get("action") == a)
+                     for a in ("expect", "link") if n[a])
+    head = " ".join(str(preview.get(k) or "") for k in ("supplier", "ref")).strip() or "supplier document"
+    return act(f"{head}: {what}" + (", with its documents" if preview.get("file") else ""),
+               "POST", "/api/suppliers/apply", {"preview": preview})
+
+
+@server.tool()
 def orders_open() -> list:
     """What was ordered and is expected (ADR-0023): each line's id, title,
     the shop's article number (sku), quantity and how many arrived, what it

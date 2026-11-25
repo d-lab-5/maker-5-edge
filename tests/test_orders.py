@@ -111,3 +111,10 @@ def test_the_page_takes_a_file_or_text(fake_cloud):
 def test_the_chat_cannot_import_an_order():
     for path in ("/api/orders/preview", "/api/orders/apply"):
         assert not any(m == "POST" and re.fullmatch(rx, path) for m, rx in settings.CHAT_ALLOWED)
+
+
+def test_a_french_shipping_notice_with_prices_in_pieces():
+    got = od.parse((FIX / "amazon-fr-shipped.eml").read_bytes())
+    assert got["supplier"] == "amazon.fr" and got["orderRef"] == "000-0000000-0000002"
+    assert [(l["sku"], l["ordered"], l["unitPrice"], l["currency"]) for l in got["lines"]] == [
+        ("B0EXAMPLE3", 2, 6.59, "EUR"), ("B0EXAMPLE4", 1, 54.53, "EUR")], "the suggestions after the total are not the order"

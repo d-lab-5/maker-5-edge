@@ -1,0 +1,26 @@
+From: "Amazon.fr" <confirmation-commande@amazon.fr>
+To: someone@example.org
+Subject: =?UTF-8?Q?Exp=C3=A9di=C3=A9_:_=C2=AB_EXAMPLEBRAND_Module..._=C2=BB_et_1_article_suppl=C3=A9mentaire?=
+Date: Mon, 16 Nov 2026 23:14:00 +0100
+MIME-Version: 1.0
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: 8bit
+
+<html><body>
+<p>Votre colis a été expédié.</p>
+<p>Livraison prévue mercredi</p>
+<p><b>Erika Example - Example City</b></p>
+<p>N° de commande</p><p>&#x202b;000-0000000-0000002</p>
+<table>
+<tr><td><a href="https://www.amazon.fr/gp/r.html?U=https%3A%2F%2Fwww.amazon.fr%2Fdp%2FB0EXAMPLE3">EXAMPLEBRAND Module abaisseur 5V 5A...</a>
+<p>Vendu par Example Seller</p><p>État: Neuf</p><p>Quantité: 2</p>
+<span>6</span><sup>59</sup><span>€</span> <span>6</span><sup>59</sup><span>€</span></td></tr>
+<tr><td><a href="https://www.amazon.fr/dp/B0EXAMPLE4">Example perceuse sans fil 18V...</a>
+<p>Vendu par Amazon.fr</p><p>État: Neuf</p><p>Quantité: 1</p>
+<span>54</span><sup>53</sup><span>€</span></td></tr>
+</table>
+<p>Total</p><p>67.71€</p>
+<p>Plus d’articles à prendre en compte</p>
+<p>144.84€</p><a href="https://www.amazon.fr/dp/B0EXAMPLE8">Example masque de soudage LCD...</a>
+<p>100.69€</p><a href="https://www.amazon.fr/dp/B0EXAMPLE9">Example cagoule soudure...</a>
+</body></html>

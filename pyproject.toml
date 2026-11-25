@@ -34,7 +34,7 @@ maker-5-edge-mcp = "maker_5_edge.mcp_server:main"
 maker-5-edge-skill = "maker_5_edge.core.skill_install:main"
 
 [tool.setuptools]
-packages = ["maker_5_edge", "maker_5_edge.core", "maker_5_edge.edge", "maker_5_edge.edge.bridges"]
+packages = ["maker_5_edge", "maker_5_edge.core", "maker_5_edge.edge", "maker_5_edge.edge.bridges", "maker_5_edge.suppliers"]
 
 # Flask resolves templates/ and static/ relative to the module that owns them,
 # and core/version.py reads VERSION beside the package, so all of it has to be

@@ -48,7 +48,10 @@ CURRENCY = {"€": "EUR", "EUR": "EUR", "£": "GBP", "GBP": "GBP", "$": "USD", "
 PACK = re.compile(r"(?<![\d.,])(\d{1,4})\s*(?:Stück|Stk\.?|pcs|pieces|Teile|St\.|er[- ]Pack|-Pack|Pack|x\b)", re.I)
 # where Amazon's own suggestions begin: nothing after this is the order
 NOT_THE_ORDER = re.compile(r"(Kunden, die|Empfehlungen für Sie|Das könnte Ihnen|Customers who bought|Recommended for you|"
-                           r"You might also like|Inspiré par|Les clients ayant)", re.I)
+                           r"You might also like|More items to consider|Weitere Artikel zum|Inspiré par|Les clients ayant|"
+                           r"Plus d.articles à prendre)", re.I)
+# a price the shop writes in pieces: "6 | 59 | €" (amazon.fr's shipping notices)
+SPLIT_PRICE = re.compile(r"(?<![\d,.])(\d{1,6}) (\d{2}) (€|£|CHF)")
 LINK_WORDS = {"ansehen", "anzeigen", "view", "details", "bestellung", "order", "produkt", "product", "voir", "hier"}
 DEVICE_WORDS = (("device", ("raspberry pi 4", "raspberry pi 5", "raspberry pi zero", "router", "switch hub", "ip camera",
                             "webcam", "multimeter", "oscilloscope", "soldering station", "3d printer", "power bank",
@@ -209,12 +212,16 @@ def parse(raw: Any) -> Dict[str, Any]:
     for n, f in enumerate(found):
         end = found[n + 1]["at"] if n + 1 < len(found) else len(tokens)
         seg = "".join(tk[1] if tk[0] == "t" else "" for tk in tokens[f["at"]:end])
+        parts = " ".join(" ".join(tk[1].split()) for tk in tokens[f["at"]:end] if tk[0] == "t" and tk[1].strip())
+        split = SPLIT_PRICE.search(parts)
         if not f["title"]:
             continue
         q = QTY.search(seg)
-        pr = PRICE.search(seg)
+        pr = PRICE.search(parts)
         price, cur = None, None
-        if pr:
+        if split and (not pr or split.start() < pr.start()):        # whichever comes first is the line's
+            price, cur = float(f"{split.group(1)}.{split.group(2)}"), CURRENCY[split.group(3)]
+        elif pr:
             sym = pr.group(1) or pr.group(4)
             amount = pr.group(2) or pr.group(3)
             price = float(amount.replace(".", "").replace(",", ".")) if "," in amount[-3:] else float(amount.replace(",", ""))

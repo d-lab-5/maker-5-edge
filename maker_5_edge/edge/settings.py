@@ -96,6 +96,8 @@ CHAT_ALLOWED: List[Tuple[str, str]] = [
     ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/deploy/t-[0-9a-f]{8}"),
     # history: name a revision, make a baseline, go back to one (as a new revision)
     ("POST", r"/api/products/[a-z][a-z0-9-]{0,39}/revisions/([0-9]{1,5}|latest)/(tag|restore)"),
+    # a supplier's document into the stock (ADR-0024): expected lines, links, documents on the parts
+    ("POST", r"/api/suppliers/apply"),
     # never here: /proposals/<id>/decide, which a person does on the page (ADR-0006 in maker-5-shared)
 ]
 

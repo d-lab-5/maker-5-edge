@@ -17,6 +17,7 @@ is extracted on demand:
 
   csv, txt, json, xml, ttl, kicad, step   as text
   pdf                                     pdftotext (poppler), when installed
+  email                                   what a supplier's document says (suppliers.read)
   xlsx                                    read with the standard library (zip + XML)
 
 Nothing here sends a file anywhere. The pattern is digitalhome-pro-edge's.
@@ -25,6 +26,7 @@ Nothing here sends a file anywhere. The pattern is digitalhome-pro-edge's.
 from __future__ import annotations
 
 import csv
+import email.header
 import io
 import json
 import os
@@ -43,7 +45,7 @@ from .edge import knowledge as kn
 
 MAX_BYTES = 64 * 1024 * 1024
 TEXT_LIMIT = 20000               # characters returned per read
-KINDS = ("kicad", "step", "csv", "xlsx", "turtle", "json", "pdf", "text", "unknown")
+KINDS = ("kicad", "step", "csv", "xlsx", "turtle", "json", "pdf", "email", "text", "unknown")
 _ID = re.compile(r"^in-[0-9a-f]{10}$")
 
 
@@ -169,6 +171,11 @@ def _xlsx_csv(data: bytes) -> bytes:
 
 def extract(path: Path, kind: str) -> str:
     data = path.read_bytes()
+    if kind == "email":                     # never the raw MIME: what the document says, its attachments read
+        from . import suppliers
+        d = suppliers.read(data)
+        text = d.pop("text", "")
+        return json.dumps(d, ensure_ascii=False, indent=1) + ("\n\n" + text if text else "")
     if kind == "pdf":
         return _pdf_text(path)
     if kind == "xlsx":
@@ -206,6 +213,12 @@ def detect(name: str, data: bytes, path: Optional[Path] = None) -> Dict:
         return {"kind": "xlsx", "note": f"a workbook, {_n(len(rows), 'row', 'rows')}"}
     text = _decode(head)
     stripped = text.lstrip()
+    if re.search(r"^(From|Return-Path|Received|Delivered-To):", text, re.M) and re.search(r"^(Subject|Date|MIME-Version):", text, re.M | re.I):
+        subject = re.search(r"^Subject:\s*(.*)$", text, re.M | re.I)
+        sender = re.search(r"^From:.*@([\w.-]+)", text, re.M | re.I)
+        about = " ".join(x for x in (sender.group(1) if sender else "", "·" if sender and subject else "",
+                                     str(email.header.make_header(email.header.decode_header(subject.group(1))))[:120] if subject else "") if x)
+        return {"kind": "email", "note": f"an e-mail{': ' + about if about else ''}; a supplier's document? supplier_read()"}
     m = _KICAD.match(stripped)
     if m:
         whole = _decode(data)

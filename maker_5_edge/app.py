@@ -39,6 +39,7 @@ from . import inbox as ib
 from . import materials as mt
 from . import migrate as mg
 from . import orders as od
+from . import suppliers as sup
 from . import parts
 from . import products as pr
 from . import wokwi
@@ -668,6 +669,34 @@ def orders_apply():
 @app.get("/api/orders")
 def orders_open():
     return run(od.open_lines)
+
+
+# ---- a supplier's document: an e-mail, a PDF or text into the stock (ADR-0024)
+
+@app.post("/api/suppliers/preview")
+def suppliers_preview():
+    """What a supplier's document would do: from the inbox ({file}), an upload
+    (kept in the inbox, so apply can attach its documents) or {text}. Writes
+    nothing to the cloud."""
+    f = request.files.get("file")
+    if f is not None:
+        def uploaded():
+            data = f.read(sup.MAX_BYTES + 1)
+            if len(data) > sup.MAX_BYTES:
+                raise sup.SupplierError(f"documents up to {sup.MAX_BYTES // (1024 * 1024)} MB")
+            return sup.preview(file=ib.add(f.filename or "document", data)["id"])
+        return run(uploaded)
+    b = body()
+    if b.get("file"):
+        return run(sup.preview, file=str(b["file"]))
+    return run(sup.preview, str(b.get("text") or ""))
+
+
+@app.post("/api/suppliers/apply")
+def suppliers_apply():
+    """The reviewed preview: expected lines, links and documents. The chat only
+    proposes this; the person's click runs it."""
+    return run(sup.apply, body().get("preview") or {})
 
 
 @app.get("/api/products/<p>/bom")

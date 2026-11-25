@@ -123,16 +123,28 @@ the organisation with two-step sign-in. Admins can also check in on the
 phone, under Materials → Intake. The agent cannot
 check in or drop an item; the edge refuses both from it.
 
-**Order e-mail** on the Intake tab reads an order confirmation (ADR-0023;
-Amazon's for now): save it from your mail program as `.eml` and drop it
-there, or paste its text. A preview lists the lines, matched to the stock
-(by the shop's article number, then by name) or drafted as new articles,
-with a pack such as "100 Stück" counted in pieces. You tick what to keep and
-**Add as expected**. Only the order number, its date and the lines leave the
-edge; the address and the payment are never read out, and the e-mail is not
-kept. When the parcel comes, scan it at the shelf as usual and pick its line
-under **From order** (the agent does, with `orders_open()`); checking it in
-books the stock and counts the line as arrived.
+**Supplier documents** (ADR-0023 and ADR-0024): attach a shop's e-mail
+(`.eml`, saved from your mail program) or its PDF in the chat with 📎, or
+drop it on the Intake tab's **Supplier document**. An order, a shipping
+notice, an invoice or a service report. The edge reads Amazon's e-mails and
+ELV's PDFs itself; for any other shop the agent reads the text. Each line is
+checked against the stock first: the shop's article number, the maker's part
+number, or a name that looks alike. Then it is
+
+- **expected:** bought and coming; the article it is, so none is made twice,
+  or a new one drafted;
+- **linked:** the part is ours already; it gets the shop's number and the
+  documents;
+- **skipped.**
+
+The chat proposes this and you confirm it; on the Intake tab you choose per
+line. Attached documents (invoices, service reports) are uploaded once to
+your organisation's private storage and listed under **Documents** on each
+part, on the phone and the web. The e-mail's text is not kept. When the
+parcel comes, scan it at the shelf as usual and pick its line under **From
+order** (the agent does, with `orders_open()`); checking it in books the
+stock, counts the line as arrived and moves its documents onto the part.
+Reading PDFs needs `pdftotext` (poppler-utils).
 
 Your work lives in `mymaker5docs/`, which git ignores and which follows the
 working directory: a folder per cloud, `mymaker5docs/prod/` and

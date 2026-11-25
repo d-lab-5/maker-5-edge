@@ -223,12 +223,16 @@
     });
   }
 
-  /** An order e-mail: drop or choose the .eml, or paste its text; a preview to tick; then expected. */
+  /**
+   * A supplier's document (ADR-0024): an e-mail (.eml) or PDF, dropped,
+   * chosen or pasted; each line to expect, link to a part the stock has, or
+   * skip; its attachments go onto those parts. The same as the chat's 📎.
+   */
   function orderDialog() {
     let pv = null;
     core.dialog(t("or.mail"), `<div class="intake-form order-form">
       <p class="note">${esc(t("or.mailLead"))}</p>
-      <label class="order-drop">${esc(t("or.file"))}<input type="file" name="file" accept=".eml,message/rfc822,.txt"></label>
+      <label class="order-drop">${esc(t("or.file"))}<input type="file" name="file" accept=".eml,message/rfc822,.pdf,application/pdf,.txt"></label>
       <label>${esc(t("or.paste"))}<textarea name="text" rows="5"></textarea></label>
       <div class="order-preview"></div>
       <div class="actions"><button value="cancel" formnovalidate>${esc(t("model.cancel"))}</button>
@@ -242,19 +246,33 @@
         if (f) { const dt = new DataTransfer(); dt.items.add(f); form.querySelector('[name="file"]').files = dt.files; read(); }
       };
       form.querySelector('[name="file"]').onchange = () => read();
+      const which = (l, i) => {
+        const opts = [];
+        if (l.match) opts.push([l.match.id, `${l.match.name} (${t(`or.by.${l.match.by}`)})`]);
+        (l.candidates || []).forEach((c) => opts.push([c.id, t("or.maybe", { name: c.name, score: Math.round(c.score * 100) })]));
+        if (l.articleId && !opts.some((o) => o[0] === l.articleId)) opts.push([l.articleId, l.articleId]);
+        if (!opts.length && !l.known) return esc(t("or.new"));
+        return `<select data-a="${i}"><option value="">${esc(t("or.new"))}</option>${opts.map(([id, label]) =>
+          `<option value="${esc(id)}" ${id === l.articleId ? "selected" : ""}>${esc(label)}</option>`).join("")}</select>`
+          + (l.known ? ` <small>${esc(t("or.known"))}</small>` : "");
+      };
       const show = () => {
         const box = form.querySelector(".order-preview");
-        box.innerHTML = `<p><b>${esc(pv.supplier)} · ${esc(pv.orderRef)}</b> ${esc(pv.orderedAt || "")}</p>
-          <table class="order-lines"><thead><tr><th></th><th>${esc(t("or.title"))}</th><th>${esc(t("in.qty"))}</th>
-            <th>${esc(t("or.is"))}</th><th>${esc(t("in.category"))}</th></tr></thead><tbody>
-          ${pv.lines.map((l, i) => `<tr class="${l.known ? "is-known" : ""}"><td><input type="checkbox" data-i="${i}" ${l.include ? "checked" : ""}></td>
+        const head = [pv.supplier, pv.ref, pv.date, t(`or.kind.${pv.kind}`)].filter(Boolean).map(esc).join(" · ");
+        box.innerHTML = `<p><b>${head}</b></p>
+          ${pv.lines.length ? "" : `<p class="note">${esc(t("or.noLines"))}</p>`}
+          <table class="order-lines"><thead><tr><th>${esc(t("or.do"))}</th><th>${esc(t("or.title"))}</th><th>${esc(t("in.qty"))}</th>
+            <th>${esc(t("or.is"))}</th></tr></thead><tbody>
+          ${pv.lines.map((l, i) => `<tr class="${l.known ? "is-known" : ""}"><td><select data-do="${i}">${["expect", "link", "skip"].map((a) =>
+              `<option value="${a}" ${l.action === a ? "selected" : ""}>${esc(t(`or.act.${a}`))}</option>`).join("")}</select></td>
             <td>${esc(l.title)}${l.unitPrice != null ? ` <small>${esc(l.unitPrice)} ${esc(l.currency || "")}</small>` : ""}</td>
             <td><input type="number" min="1" data-q="${i}" value="${l.qty}" class="order-qty">${l.pack > 1 ? ` <small>${esc(t("or.pack", { n: l.ordered, each: l.pack }))}</small>` : ""}</td>
-            <td>${l.known ? esc(t("or.known")) : l.match ? `${esc(l.match.name)} <small>${esc(t(`or.by.${l.match.by}`))}</small>` : esc(t("or.new"))}</td>
-            <td>${l.match ? "" : esc(l.article.category)}</td></tr>`).join("")}</tbody></table>`;
-        box.querySelectorAll("[data-i]").forEach((c) => c.onchange = () => { pv.lines[+c.dataset.i].include = c.checked; });
+            <td>${which(l, i)}</td></tr>`).join("")}</tbody></table>
+          ${(pv.attachments || []).length ? `<p class="note">${esc(t("or.docs", { list: pv.attachments.map((x) => x.name).join(", ") }))}</p>` : ""}`;
+        box.querySelectorAll("[data-do]").forEach((c) => c.onchange = () => { pv.lines[+c.dataset.do].action = c.value; });
+        box.querySelectorAll("[data-a]").forEach((c) => c.onchange = () => { pv.lines[+c.dataset.a].articleId = c.value || null; });
         box.querySelectorAll("[data-q]").forEach((c) => c.onchange = () => { pv.lines[+c.dataset.q].qty = Math.max(1, +c.value || 1); });
-        form.querySelector('[value="apply"]').disabled = false;
+        form.querySelector('[value="apply"]').disabled = !pv.lines.length;
       };
       async function read() {
         const f = form.querySelector('[name="file"]').files[0];
@@ -263,10 +281,10 @@
         try {
           if (f) {
             const fd = new FormData(); fd.append("file", f);
-            const res = await fetch("/api/orders/preview", { method: "POST", body: fd });
+            const res = await fetch("/api/suppliers/preview", { method: "POST", body: fd });
             r = await res.json().catch(() => ({}));
             if (!res.ok) throw r;
-          } else r = await core.api("POST", "/api/orders/preview", { text });
+          } else r = await core.api("POST", "/api/suppliers/preview", { text });
         } catch (err) { core.toast(failed(err), true); return; }
         pv = r; show();
       }
@@ -275,9 +293,11 @@
         if (!b || b === "cancel") { form.onsubmit = null; return; }
         ev.preventDefault();
         if (b === "read") { await read(); return; }
+        const bad = pv.lines.find((l) => l.action === "link" && !l.articleId && !l.known);
+        if (bad) { core.toast(t("or.linkWhich", { title: bad.title }), true); return; }
         try {
-          const r = await core.api("POST", "/api/orders/apply", { preview: pv });
-          core.toast(t("or.added", { n: r.added, skipped: r.skipped }));
+          const r = await core.api("POST", "/api/suppliers/apply", { preview: pv });
+          core.toast(t("or.added", { n: r.added, skipped: r.skipped, linked: r.linked.length, docs: r.documents.length }));
         } catch (err) { core.toast(failed(err), true); return; }
         form.onsubmit = null;
         dlg.close();

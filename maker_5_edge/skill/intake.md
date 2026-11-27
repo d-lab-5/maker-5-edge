@@ -25,8 +25,9 @@ bag. Never invent a serial, a maker or a model. Leave a field out rather than
 guess, and say how sure you are of each field in `sure`.
 
 - **A device** (`what: device`): one thing with its own label, such as a
-  board, a PC, a power supply, a phone. Tracked unit by unit; `serial` when
-  the plate shows one.
+  board, a PC, a power supply, a phone, a robot. Tracked unit by unit;
+  `serial` when the plate shows one. A robot (Thymio, Cozmo, a rover, an arm)
+  is `robots/…`, never a controller, though it has one inside.
 - **A box of parts** (`what: box`): a bag, a box or a drawer with many of one
   part, such as resistors, screws or LEDs. The label becomes the box's;
   `boxName` like "Resistors 10 kΩ", `boxKind` bag/box/folder/drawer, `qty`.

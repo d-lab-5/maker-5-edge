@@ -268,11 +268,13 @@ def _maker(title: str) -> str:
 def _draft(line: Dict[str, Any]) -> Dict[str, Any]:
     """A line as it would be expected: a device or parts, how many parts, and a new article."""
     title = line["title"]
-    device = bool(bom_import._words(f" {title} ", DEVICE_WORDS))
+    category = bom_import._words(f" {title} ", bom_import.CATEGORY_WORDS) or "other"
+    # a robot, a board, a phone is one thing with its own label, whatever the title says
+    device = bool(bom_import._words(f" {title} ", DEVICE_WORDS)) or category.startswith("robots")
     pack = PACK.search(title)
     each = int(pack.group(1)) if pack and not device else 1
     name = re.split(r"\s[,|–-]\s|, ", title)[0][:120] if len(title) > 120 else title
-    article = {"name": name, "category": bom_import._words(f" {title} ", bom_import.CATEGORY_WORDS) or "other"}
+    article = {"name": name, "category": category}
     maker = _maker(title)
     if maker:
         article["manufacturer"] = maker
